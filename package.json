@@ -1,0 +1,10 @@
+{
+  "name": "dashboard-clickup",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Live ClickUp project dashboard (static front-end + Vercel serverless proxy).",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  }
+}
