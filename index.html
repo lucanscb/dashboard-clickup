@@ -1403,7 +1403,9 @@ function updateStatusKpis(tasks) {
 }
 
 function qEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function loadCFCache() { try { TASK_CF = JSON.parse(localStorage.getItem(CF_CACHE_KEY) || '{}') || {}; } catch { TASK_CF = {}; } }
+// Merge the persisted cache UNDER whatever is already in memory, so field data
+// populated up-front (e.g. from a bulk fetch) is never wiped by the cache load.
+function loadCFCache() { try { const cached = JSON.parse(localStorage.getItem(CF_CACHE_KEY) || '{}') || {}; TASK_CF = Object.assign(cached, TASK_CF); } catch (e) { TASK_CF = TASK_CF || {}; } }
 function saveCFCache() { try { localStorage.setItem(CF_CACHE_KEY, JSON.stringify(TASK_CF)); } catch (e) {} }
 
 function areaToolVariants(suffix) {
