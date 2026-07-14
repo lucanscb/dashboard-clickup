@@ -1,68 +1,127 @@
-# Dashboard ClickUp — Web App
+# Dashboard ClickUp
 
-A live project dashboard for a ClickUp list: status distribution by Area, a Blocked
-control board, Tasks Filters, Weekly Reports, Swimlanes (Area × status), a real
-task-hierarchy tree, Status Breakdown, and a Timeline. Fully **independent** project
-(its own repo + its own Vercel deployment).
+A live, read-only project dashboard for a **ClickUp** list. It turns raw tasks into
+an executive view: status distribution by area, a blocked-work board, powerful task
+filters, weekly-report tooling, swimlanes, a real task hierarchy, and a timeline —
+all rendered in the browser and refreshed live from the ClickUp REST API.
 
-## How it works
-- **Front-end:** a single static `index.html` (charts via Chart.js).
-- **Data:** the browser calls `/api/clickup?op=...`, a small **Vercel serverless
-  function** (`api/clickup.js`) that talks to the **ClickUp REST API** with a token kept
-  **server-side** (never shipped to the browser).
-- The REST list endpoint returns custom fields + parent in bulk, so the whole dashboard
-  loads in ~18 API calls — no per-task fan-out.
+> **Live demo:** _add your Vercel URL here, e.g._ `https://dashboard-clickup.vercel.app`
 
-## Prerequisites
-- A **GitHub** account and a **Vercel** account (free) — you can reuse the ones you already have.
-- **Node.js 18+** and **Git** installed (only needed for the CLI steps / local run).
-- A **ClickUp API token**: ClickUp → your avatar (bottom-left) → **Settings** → **Apps**
-  → **API Token** → **Generate/Copy** (it starts with `pk_`).
-- The **List ID** to read: open the list in ClickUp; the URL ends in `/li/<NUMBERS>` —
-  that number. (This project defaults to `901417662317`.)
+---
 
-## Environment variables (set these in Vercel)
-| Name | Value |
-|------|-------|
-| `CLICKUP_API_TOKEN` | your `pk_...` token |
-| `CLICKUP_LIST_ID`   | the list id (e.g. `901417662317`) |
+## Highlights
 
-## Deploy (independent from any other project)
+- **Zero build step.** A single static front-end plus one serverless function.
+- **Token never leaves the server.** The browser only talks to `/api/clickup`; the
+  ClickUp token lives in a Vercel environment variable and is used only server-side.
+- **Fast by design.** The ClickUp REST list endpoint returns custom fields and
+  parent links in bulk, so the whole dataset loads in a handful of requests instead
+  of one call per task.
+- **Dynamic to the workspace.** Statuses, colours, custom-field options and the task
+  tree are read from ClickUp at load time — rename a status or add an area and the
+  dashboard follows automatically.
 
-### Option A — Vercel dashboard (no CLI)
-1. Create a **new GitHub repository** (e.g. `dashboard-clickup`), private or public.
-2. Push this folder to it:
-   ```bash
-   git init
-   git add .
-   git commit -m "Dashboard ClickUp web app"
-   git branch -M main
-   git remote add origin <your-repo-url>
-   git push -u origin main
-   ```
-3. On **vercel.com → Add New… → Project → Import** your repo. Framework preset: **Other**
-   (no build step needed).
-4. In the project's **Settings → Environment Variables**, add `CLICKUP_API_TOKEN` and
-   `CLICKUP_LIST_ID` (values above). Redeploy.
-5. Open the generated URL — the dashboard loads live from your ClickUp list.
+## Features
 
-### Option B — Vercel CLI
-```bash
-npm i -g vercel
-vercel login
-vercel --yes                     # first deploy (creates a NEW project)
-vercel env add CLICKUP_API_TOKEN # paste your pk_ token
-vercel env add CLICKUP_LIST_ID   # e.g. 901417662317
-vercel --prod                    # publish
+**Dashboard** — overall status doughnut, status distribution per Area, and a
+data-quality panel that flags tasks missing a required field (Assignee App, Priority,
+Area, Feature) with direct links to fix them in ClickUp.
+
+**Tasks Filters** — filter by Assignee App, status, area, due-date range and free text;
+quick theme chips (Blocked, Overdue, In Review, Ready for Approval, …); grouped by
+status with a PDF export.
+
+**Weekly Reports** — build reusable report configurations, a per-assignee report
+center, and a consolidated executive report (KPIs, charts, detailed table).
+
+**Blocked** — a dedicated board for blocked tasks: distribution by Area and Priority,
+by-area and by-assignee-app breakdowns, and a full list with links.
+
+**Swimlanes** — Area × real ClickUp status matrix with a per-area completion bar.
+
+**Tree Tasks** — a faithful mirror of the ClickUp parent → subtask hierarchy with the
+same columns (Assignee App, Priority, Area, Feature, Due date), loaded on demand.
+
+**Status Breakdown / Timeline / Risks** — status table by ClickUp type, a stacked
+"due by month" chart with a cumulative completion trend and a date-range filter, and
+an automatic list of inconsistencies.
+
+## Tech stack
+
+- **Front-end:** vanilla HTML/CSS/JS, [Chart.js](https://www.chartjs.org/) for charts
+  (loaded from a pinned CDN with SRI). No framework, no bundler.
+- **Backend:** a single Node serverless function on **[Vercel](https://vercel.com/)**.
+- **Data source:** the **ClickUp REST API v2**.
+
+## Architecture
+
 ```
+Browser (index.html)
+  │  fetch('/api/clickup?op=tasks|fields|statuses')
+  ▼
+Vercel serverless function (api/clickup.js)
+  │  adds Authorization: <CLICKUP_API_TOKEN>   ← server-side only
+  ▼
+ClickUp REST API  →  the configured list only
+```
+
+The front-end never sees the token or the ClickUp endpoints. A thin bridge in
+`index.html` adapts the app's data calls to the proxy and normalises the responses;
+custom fields, parent links and statuses are read once, in bulk, and cached in memory.
+
+## Project structure
+
+```
+.
+├── api/
+│   └── clickup.js      # serverless proxy: GET-only, whitelisted to this list
+├── index.html          # the dashboard (bridge + application)
+├── vercel.json         # HTTP security headers (CSP, X-Frame-Options, …)
+├── package.json
+├── .env.example        # required environment variables
+├── LICENSE             # MIT
+└── README.md
+```
+
+## Configuration
+
+| Variable | Description |
+|---|---|
+| `CLICKUP_API_TOKEN` | ClickUp personal API token (`pk_…`). Stored only in Vercel. |
+| `CLICKUP_LIST_ID`   | The ClickUp List ID to read (the number at the end of `/li/<ID>`). |
 
 ## Run locally
+
 ```bash
 cp .env.example .env      # fill in your token + list id
-npx vercel dev            # serves index.html + /api on http://localhost:3000
+npx vercel dev            # http://localhost:3000 (serves index.html + /api)
 ```
 
-## Notes
-- Public, no login — anyone with the link can view (read-only).
-- To point it at a different list, just change `CLICKUP_LIST_ID` and redeploy.
-- The token is only ever used inside the serverless function; it is never exposed to the browser.
+## Deploy (Vercel)
+
+1. Push this repo to GitHub.
+2. On Vercel, **Add New → Project → Import** the repo (framework preset: **Other**).
+3. Add the two environment variables above.
+4. Deploy — Vercel serves `index.html` statically and `api/clickup.js` as a function.
+
+## Security
+
+- The API token is **server-side only** — never shipped to the browser and excluded
+  from version control via `.gitignore`.
+- The proxy is **GET-only** and **whitelisted**: it can read only this list's tasks,
+  fields and statuses — no other endpoint of the account is reachable.
+- HTTP security headers are set in `vercel.json` (Content-Security-Policy,
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`).
+- The deployment is public and **read-only**, so point `CLICKUP_LIST_ID` at a list with
+  non-sensitive / demo data.
+
+## Roadmap
+
+- Split the front-end into ES modules (`app.js`, `styles.css`, `bridge.js`) and drop
+  `'unsafe-inline'` from the CSP using per-response nonces.
+- Optional e-mail login for private deployments.
+- A static-snapshot mode for a token-free, always-on demo.
+
+## License
+
+[MIT](./LICENSE) © 2026 Lucas B

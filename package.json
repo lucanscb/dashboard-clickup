@@ -2,7 +2,20 @@
   "name": "dashboard-clickup",
   "version": "1.0.0",
   "private": true,
-  "description": "Live ClickUp project dashboard (static front-end + Vercel serverless proxy).",
+  "description": "Live ClickUp project dashboard — a static front-end backed by a Vercel serverless proxy to the ClickUp REST API.",
+  "keywords": [
+    "clickup",
+    "dashboard",
+    "vercel",
+    "serverless",
+    "chart.js",
+    "project-management"
+  ],
+  "author": "Lucas B",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "vercel dev",
     "deploy": "vercel --prod"

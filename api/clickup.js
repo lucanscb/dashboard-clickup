@@ -20,7 +20,8 @@ module.exports = async (req, res) => {
   try {
     let url;
     if (op === 'tasks') {
-      const page = parseInt((req.query.page || '0'), 10) || 0;
+      // Clamp the page number to a sane, non-negative range (defensive input handling).
+      const page = Math.min(Math.max(parseInt((req.query.page || '0'), 10) || 0, 0), 500);
       url = `${base}/list/${listId}/task?subtasks=true&include_closed=true&page=${page}`;
     } else if (op === 'fields') {
       url = `${base}/list/${listId}/field`;

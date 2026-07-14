@@ -881,6 +881,24 @@ table tr:hover { background: #fafbfc; }
 })();
 </script>
 <script>
+/* ============================================================================
+ * Dashboard ClickUp — front-end application
+ * ----------------------------------------------------------------------------
+ * A single-page dashboard that visualises a ClickUp list. All data access goes
+ * through window.cowork.callMcpTool(), which the web-app bridge (see the script
+ * above) routes to the /api/clickup serverless proxy — so this file has no
+ * knowledge of tokens or endpoints.
+ *
+ * Data model (loaded once, in bulk):
+ *   - FIELD_DEFS  : custom-field definitions (Area / Feature / Assignee App).
+ *   - STATUS_LIST : the list's real ClickUp statuses (name, colour, order, type).
+ *   - TASK_CF     : per-task custom-field values + parent id, keyed by task id.
+ *   - cfLabels(t, field) reads TASK_CF; statusMeta(status) reads STATUS_LIST.
+ *
+ * Tabs: Dashboard, Tasks Filters, Weekly Reports, Blocked, Swimlanes,
+ *       Tree Tasks, Status Breakdown, Timeline, Risks.
+ * Charts are rendered with Chart.js; the in-slice numbers use an inline plugin.
+ * ========================================================================== */
 // ---------- Tab switching ----------
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -908,35 +926,6 @@ const STATUS_BUCKET = (raw) => {
   if (s.includes('progress') || s.includes('review') || s.includes('approval') || s.includes('changes requested')) return 'In Progress';
   if (s.includes('backlog') || s.includes('to do') || s === 'backlog') return 'Open';
   return 'Open';
-};
-// A task is a defect if its status indicates it OR it carries the "defect" tag.
-function isDefect(t) {
-  if (!t) return false;
-  if ((t.status || '').toLowerCase().includes('defect')) return true;
-  const tags = t.tags || [];
-  for (let i = 0; i < tags.length; i++) {
-    if ((tags[i].name || '').toLowerCase() === 'defect') return true;
-  }
-  return false;
-}
-// Severity uses ClickUp's native priority names + colors (Urgent · High · Normal · Low · Empty).
-// Defects without a priority are shown as "Empty" — same label ClickUp uses.
-function defectSeverity(t) {
-  const p = (t && t.priority) ? String(t.priority).toLowerCase() : null;
-  if (p === 'urgent') return 'Urgent';
-  if (p === 'high') return 'High';
-  if (p === 'normal') return 'Normal';
-  if (p === 'low') return 'Low';
-  return 'Empty';
-}
-function defectSeverityIsEmpty(t) { return !t || !t.priority; }
-const SEVERITY_ORDER = ['Urgent', 'High', 'Normal', 'Low', 'Empty'];
-const SEVERITY_COLORS = {
-  'Urgent': '#f50000',  // ClickUp red flag
-  'High':   '#ffcc00',  // ClickUp yellow flag
-  'Normal': '#6fddff',  // ClickUp light-blue flag
-  'Low':    '#d8d8d8',  // ClickUp light-gray flag
-  'Empty':  '#ffffff'   // ClickUp empty/no-flag — rendered with a gray outline
 };
 const BUCKET_COLORS = {
   'Open':        '#9ca3af',
@@ -1248,36 +1237,6 @@ function renderKpis(stats) {
   `;
 }
 
-function renderLaneTable(stats) {
-  const lanes = ['DEV', 'PM', 'Design', 'Other'].filter(l => stats.byLane[l]);
-  const rows = lanes.map(lane => {
-    const total = stats.byLane[lane] || 0;
-    const lb = stats.byLaneBucket[lane] || {};
-    const done = lb.Complete || 0;
-    const ip = lb['In Progress'] || 0;
-    const open = lb.Open || 0;
-    const block = lb['On Hold'] || 0;
-    const def = lb.Defect || 0;
-    const p = pct(done, total);
-    return `<tr>
-      <td><span class="lane-badge lb-${lane}">${lane}</span></td>
-      <td class="num right">${total}</td>
-      <td class="num right">${done}</td>
-      <td class="num right">${ip}</td>
-      <td class="num right">${open}</td>
-      <td class="num right">${block}</td>
-      <td class="num right">${def}</td>
-      <td class="num right">${p}%</td>
-      <td><div class="bar"><i style="width:${p}%"></i></div></td>
-    </tr>`;
-  }).join('');
-  document.getElementById('laneTable').innerHTML = `
-    <thead><tr>
-      <th>Lane</th><th class="right">Total</th><th class="right">Done</th>
-      <th class="right">In Prog</th><th class="right">Open</th><th class="right">On Hold</th><th class="right">Defects</th>
-      <th class="right">% Done</th><th>Progress</th>
-    </tr></thead><tbody>${rows}</tbody>`;
-}
 
 function renderLaneCharts(stats) {
   const statusCtx = document.getElementById('statusChart');
@@ -1313,7 +1272,6 @@ const QUALITY_FIELDS = [
 ];
 const CF_CACHE_KEY = 'dashboard-clickup_fields_cache_v2';
 const FIELDDEFS_CACHE_KEY = 'dashboard-clickup_fielddefs_v2';
-const PIE_BUCKETS = ['Complete', 'In Progress', 'Open', 'On Hold', 'Defect'];
 const QUALITY_LIST_CAP = 250;
 let ACTIVE_FILTER_TOOL = null;
 let FIELD_DEFS = {};
@@ -1643,9 +1601,6 @@ function aggregateDim(tasks, dim, values, allowed) {
 }
 
 function areaSlug(x) { return String(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
-function bucketLegendHtml() {
-  return PIE_BUCKETS.map(b => '<span class="lg-item"><span class="lg-dot" style="background:' + BUCKET_COLORS[b] + '"></span>' + b + '</span>').join('');
-}
 
 function buildDimShell(dim, values) {
   const grid = document.getElementById(dim.gridId); if (!grid) return;
@@ -3028,97 +2983,7 @@ function renderByStatusBody(allTasks) {
   }).join('');
 }
 
-function renderByUser(allTasks) {
-  const opts = buildFilterOptions(allTasks);
-  if (!FILTER_STATE.bu.wired) {
-    renderFilterBar('bu', opts, () => renderByUserBody(allTasks));
-    renderChipBar('bu', allTasks, () => renderByUserBody(allTasks));
-    FILTER_STATE.bu.wired = true;
-  }
-  renderByUserBody(allTasks);
-}
 
-function renderByUserBody(allTasks) {
-  const f = readFilters('bu');
-  let filtered = applyFilters(allTasks, f);
-  filtered = applyChip(filtered, 'bu');
-  const summary = describeFilters(f);
-  if (CHIP_STATE.bu) {
-    const def = CHIP_DEFS.find(d => d.key === CHIP_STATE.bu);
-    if (def) summary.unshift(`theme: <strong>${def.icon} ${def.label}</strong>`);
-  }
-  document.getElementById('bu-summary').innerHTML =
-    `<strong>${filtered.length}</strong> of ${allTasks.length} tasks` +
-    (summary.length ? ' · ' + summary.join(' · ') : '');
-
-  // Group by assignee. Tasks with multiple assignees appear under each.
-  const groups = {};
-  const unassigned = [];
-  for (const t of filtered) {
-    const a = t.assignees || [];
-    if (!a.length) { unassigned.push(t); continue; }
-    for (const u of a) {
-      (groups[u.username] = groups[u.username] || []).push(t);
-    }
-  }
-  const sorted = Object.keys(groups).sort((x, y) => groups[y].length - groups[x].length);
-
-  if (!sorted.length && !unassigned.length) {
-    document.getElementById('bu-groups').innerHTML = `<div class="empty">No tasks match the current filters.</div>`;
-    return;
-  }
-
-  const userBlock = (name, tasks) => {
-    const counts = { Complete: 0, 'In Progress': 0, Open: 0, 'On Hold': 0, Defect: 0 };
-    for (const t of tasks) counts[STATUS_BUCKET(t.status)]++;
-    const total = tasks.length;
-    const sorted = tasks.slice().sort((a, b) => {
-      // pending first
-      const ap = STATUS_BUCKET(a.status) === 'Complete' ? 1 : 0;
-      const bp = STATUS_BUCKET(b.status) === 'Complete' ? 1 : 0;
-      if (ap !== bp) return ap - bp;
-      const da = a.due_date ? Number(a.due_date) : Infinity;
-      const db = b.due_date ? Number(b.due_date) : Infinity;
-      return da - db;
-    });
-    return `<div class="user-card">
-      <div class="user-card-head">
-        ${avatarHTML(name, 'xl')}
-        <div style="flex:1; min-width: 0;">
-          <div class="uname">${escapeHtml(name)}</div>
-          <div class="ucount">${total} task${total === 1 ? '' : 's'} · ${pct(counts.Complete, total)}% complete</div>
-        </div>
-      </div>
-      <div class="user-card-stats">
-        <div class="user-stat s-done"><div class="n">${counts.Complete}</div><div class="l">Done</div></div>
-        <div class="user-stat s-prog"><div class="n">${counts['In Progress']}</div><div class="l">In Prog</div></div>
-        <div class="user-stat s-open"><div class="n">${counts.Open}</div><div class="l">Open</div></div>
-        <div class="user-stat s-block"><div class="n">${counts['On Hold']}</div><div class="l">On Hold</div></div>
-        <div class="user-stat s-defect"><div class="n">${counts.Defect}</div><div class="l">Defects</div></div>
-      </div>
-      <details>
-        <summary style="cursor:pointer; font-size: 12px; color: #4f46e5; padding: 4px 0;">Show ${total} task${total === 1 ? '' : 's'}</summary>
-        <div style="margin-top: 8px; border-top: 1px solid #f0f1f4;">
-          ${sorted.map(renderTaskRow).join('')}
-        </div>
-      </details>
-    </div>`;
-  };
-
-  let html = sorted.map(u => userBlock(u, groups[u])).join('');
-  if (unassigned.length) {
-    html += `<div class="user-card">
-      <div class="user-card-head">
-        <span class="avatar xl" style="background:#9ca3af">??</span>
-        <div style="flex:1;"><div class="uname">Unassigned</div><div class="ucount">${unassigned.length} task${unassigned.length === 1 ? '' : 's'}</div></div>
-      </div>
-      <details><summary style="cursor:pointer; font-size: 12px; color: #4f46e5; padding: 4px 0;">Show ${unassigned.length}</summary>
-        <div style="margin-top: 8px; border-top: 1px solid #f0f1f4;">${unassigned.map(renderTaskRow).join('')}</div>
-      </details>
-    </div>`;
-  }
-  document.getElementById('bu-groups').innerHTML = html;
-}
 
 // ====================================================================
 //  Weekly Reports module
@@ -5222,267 +5087,7 @@ function wireGeneralReport() {
 // ====================================================================
 let _dfxSeverityChartInst = null;
 // ---- Defects PDF builder (mirrors the on-screen Defects tab) ----
-function buildDefectsPdf(defects) {
-  const pdf = new SimplePDF();
-  const W = pdf.W, H = pdf.H, M = pdf.margin, CW = W - 2 * M;
-  const EN = 'en-US';
-  const IND = '#4f46e5', INK = '#1a1d23', SUB = '#6b7280', LINE = '#e3e6eb', SUR = '#f7f8fa';
-  const total = defects.length;
-  const overdue = defects.filter(t => overdueDays(t) > 0).length;
-  const unassigned = defects.filter(t => !(t.assignees || []).length).length;
-  const sevCounts = {};
-  for (const s of SEVERITY_ORDER) sevCounts[s] = 0;
-  for (const t of defects) sevCounts[defectSeverity(t)]++;
-  const todayLong = new Date().toLocaleDateString(EN, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
-  const todayShort = new Date().toLocaleDateString(EN);
-  const pctStr = (n) => total ? Math.round(n / total * 100) + '%' : '';
 
-  function pageHeader(cont) {
-    const bh = cont ? 38 : 86;
-    pdf.rect(0, H - bh, W, bh, { fill: IND });
-    const px = M + 4, py = H - 30;
-    if (!cont) {
-      pdf.circle(px + 7, py + 11, 5, '#ffffff');
-      pdf.circle(px + 1, py + 3, 2.4, '#ffffff'); pdf.circle(px + 6, py, 2.4, '#ffffff');
-      pdf.circle(px + 11, py, 2.4, '#ffffff'); pdf.circle(px + 16, py + 3, 2.4, '#ffffff');
-      pdf.text(M + 26, H - 24, 'Dashboard - ClickUp', { size: 12, bold: true, color: '#ffffff' });
-      pdf.text(M + 26, H - 50, 'Defects Report', { size: 19, bold: true, color: '#ffffff' });
-      pdf.text(M + 26, H - 67, total + ' defect' + (total === 1 ? '' : 's') + ' · severity by ClickUp priority', { size: 10, color: '#c7d2fe' });
-      pdf.text(W - M - 170, H - 24, 'Generated ' + new Date().toLocaleString(EN), { size: 8, color: '#e0e7ff' });
-    } else {
-      pdf.text(M, H - 24, 'Dashboard - ClickUp  ·  Defects Report', { size: 9, bold: true, color: '#ffffff' });
-      pdf.text(W - M - 90, H - 24, todayShort, { size: 8, color: '#e0e7ff' });
-    }
-    pdf.y = H - bh - 22;
-  }
-  function newPage() { pdf.addPage(); pageHeader(true); }
-
-  // Renders a small severity flag (matches the on-screen UI: colored square; Empty = white outlined)
-  function drawSeverityFlag(x, y, sev, sz) {
-    const color = SEVERITY_COLORS[sev] || '#cccccc';
-    const stroke = (sev === 'Low' || sev === 'Normal' || sev === 'Empty') ? '#94a3b8' : null;
-    pdf.rect(x, y, sz, sz, stroke ? { fill: color, stroke } : { fill: color });
-  }
-
-  // ============ PAGE 1 — Overview + KPI grid + severity legend ============
-  pageHeader(false);
-  pdf.text(M, pdf.y, 'Defects Overview — ' + todayLong, { size: 12, bold: true, color: INK }); pdf.y -= 14;
-  pdf.text(M, pdf.y, total + ' total · ' + overdue + ' overdue · ' + unassigned + ' unassigned · ' + sevCounts['Empty'] + ' without a priority (Empty)', { size: 9, color: SUB }); pdf.y -= 14;
-  pdf.y -= 4;
-
-  // KPI grid 4 x 2 = 8 tiles
-  const KPIs = [
-    ['Total defects', String(total), '', '#1f2937'],
-    ['Urgent', String(sevCounts['Urgent']), pctStr(sevCounts['Urgent']), '#f50000'],
-    ['High', String(sevCounts['High']), pctStr(sevCounts['High']), '#e6b800'],
-    ['Normal', String(sevCounts['Normal']), pctStr(sevCounts['Normal']), '#3aa3c4'],
-    ['Low', String(sevCounts['Low']), pctStr(sevCounts['Low']), '#9ca3af'],
-    ['Empty', String(sevCounts['Empty']), pctStr(sevCounts['Empty']), '#b8b8b8'],
-    ['Overdue', String(overdue), pctStr(overdue), '#c2410c'],
-    ['Unassigned', String(unassigned), pctStr(unassigned), '#3730a3']
-  ];
-  const cols = 4, gap = 8;
-  const tileW = (CW - gap * (cols - 1)) / cols;
-  const tileH = 56;
-  const kpiTop = pdf.y;
-  for (let i = 0; i < KPIs.length; i++) {
-    const c = i % cols, rr = Math.floor(i / cols);
-    const x = M + c * (tileW + gap);
-    const y = kpiTop - rr * (tileH + gap);
-    pdf.rect(x, y - tileH, tileW, tileH, { fill: '#ffffff', stroke: LINE });
-    pdf.rect(x, y - tileH, 4, tileH, { fill: KPIs[i][3] });
-    pdf.text(x + 12, y - 14, KPIs[i][0].toUpperCase(), { size: 7.5, bold: true, color: SUB });
-    pdf.text(x + 12, y - 34, KPIs[i][1], { size: 17, bold: true, color: INK });
-    if (KPIs[i][2]) pdf.text(x + 12, y - 48, KPIs[i][2] + ' of total', { size: 8, color: SUB });
-  }
-  pdf.y = kpiTop - 2 * (tileH + gap) - 4;
-
-  // Severity legend box
-  pdf.text(M, pdf.y, 'Severity definitions', { size: 12, bold: true, color: INK }); pdf.y -= 12;
-  const legBoxTop = pdf.y;
-  const legBoxH = 6 + 5 * 16 + 6;
-  pdf.rect(M, legBoxTop - legBoxH, CW, legBoxH, { fill: SUR, stroke: LINE });
-  pdf.rect(M, legBoxTop - legBoxH, 4, legBoxH, { fill: IND });
-  let ly = legBoxTop - 12;
-  const legendItems = [
-    ['Urgent',  'ClickUp priority = Urgent'],
-    ['High',    'ClickUp priority = High'],
-    ['Normal',  'ClickUp priority = Normal'],
-    ['Low',     'ClickUp priority = Low'],
-    ['Empty',   'No priority set in ClickUp']
-  ];
-  for (const [sev, descr] of legendItems) {
-    drawSeverityFlag(M + 14, ly - 7, sev, 9);
-    pdf.text(M + 30, ly - 1, sev, { size: 10, bold: true, color: INK });
-    pdf.text(M + 80, ly - 1, descr, { size: 9, color: SUB });
-    const n = sevCounts[sev] || 0;
-    pdf.text(M + CW - 100, ly - 1, n + ' defects', { size: 9, color: INK });
-    pdf.text(M + CW - 30, ly - 1, pctStr(n), { size: 9, bold: true, color: INK });
-    ly -= 16;
-  }
-  pdf.y = legBoxTop - legBoxH - 16;
-
-  // ============ PAGE 2 — Severity pie + Lane / Assignee bars ============
-  newPage();
-  pdf.text(M, pdf.y, 'Severity Distribution', { size: 14, bold: true, color: INK }); pdf.y -= 6;
-  pdf.text(M, pdf.y, 'Pie chart of the ' + total + ' defect' + (total === 1 ? '' : 's') + ' grouped by ClickUp priority.', { size: 8.5, color: SUB }); pdf.y -= 16;
-
-  // Pie + Legend in two columns
-  const pieAreaH = 230;
-  const pieAreaTop = pdf.y;
-  const pieLeftW = 240;
-  pdf.rect(M, pieAreaTop - pieAreaH, CW, pieAreaH, { fill: '#ffffff', stroke: LINE });
-  // Pie
-  const r0 = 90;
-  const cx = M + 30 + r0, cy = pieAreaTop - 20 - r0;
-  if (total > 0) {
-    let a = Math.PI / 2;
-    for (const s of SEVERITY_ORDER) {
-      const v = sevCounts[s] || 0;
-      if (v <= 0) continue;
-      const a1 = a + (v / total) * Math.PI * 2;
-      pdf.wedge(cx, cy, r0, a, a1, SEVERITY_COLORS[s]);
-      a = a1;
-    }
-    // Outline the Empty slice (since white-on-white is invisible)
-    if (sevCounts['Empty'] > 0) {
-      // approximate outline by re-drawing thin slices border — skip for simplicity, rely on legend
-    }
-  } else {
-    pdf.circle(cx, cy, r0, '#e5e7eb');
-  }
-  pdf.circle(cx, cy, r0 * 0.55, '#ffffff');
-  pdf.text(cx - pdf.textWidth(String(total), 18) / 2, cy - 2, String(total), { size: 18, bold: true, color: INK });
-  pdf.text(cx - pdf.textWidth('DEFECTS', 7) / 2, cy - 18, 'DEFECTS', { size: 7, color: SUB });
-
-  // Legend on the right of the pie
-  let lly = pieAreaTop - 20;
-  const llx = M + pieLeftW + 16;
-  for (const s of SEVERITY_ORDER) {
-    drawSeverityFlag(llx, lly - 10, s, 10);
-    pdf.text(llx + 16, lly - 3, s, { size: 10, bold: true, color: INK });
-    const n = sevCounts[s] || 0;
-    const p = total ? Math.round(n / total * 100) : 0;
-    pdf.text(M + CW - 90, lly - 3, n + ' defect' + (n === 1 ? '' : 's'), { size: 9, color: INK });
-    pdf.text(M + CW - 30, lly - 3, p + '%', { size: 10, bold: true, color: INK });
-    // Mini progress bar under each entry
-    const barW = CW - pieLeftW - 16 - 110;
-    const barX = llx + 16;
-    const barY = lly - 16;
-    const fillW = total > 0 ? Math.max(2, Math.round((n / total) * barW)) : 0;
-    const fillStroke = (s === 'Low' || s === 'Normal' || s === 'Empty') ? { fill: SEVERITY_COLORS[s], stroke: '#94a3b8' } : { fill: SEVERITY_COLORS[s] };
-    pdf.rect(barX, barY, barW, 5, { fill: '#f1f3f6' });
-    if (fillW > 0) pdf.rect(barX, barY, fillW, 5, fillStroke);
-    lly -= 32;
-  }
-  pdf.y = pieAreaTop - pieAreaH - 18;
-
-  // By lane + By assignee — side by side
-  const byLane = {};
-  for (const t of defects) { const l = LANE(t); byLane[l] = (byLane[l] || 0) + 1; }
-  const laneEntries = Object.entries(byLane).sort((a, b) => b[1] - a[1]);
-  const byUser = {};
-  for (const t of defects) {
-    const assignees = (t.assignees && t.assignees.length) ? t.assignees : [{ username: 'Unassigned' }];
-    for (const a of assignees) byUser[a.username || 'Unknown'] = (byUser[a.username || 'Unknown'] || 0) + 1;
-  }
-  const userEntries = Object.entries(byUser).sort((a, b) => b[1] - a[1]).slice(0, 10);
-
-  const halfW = (CW - 12) / 2;
-  function drawBarPanel(title, entries, originX, originY, color) {
-    const ch = 220;
-    pdf.rect(originX, originY - ch, halfW, ch, { fill: '#ffffff', stroke: LINE });
-    pdf.text(originX + 12, originY - 18, title, { size: 11, bold: true, color: INK });
-    if (!entries.length) { pdf.text(originX + 12, originY - 100, 'No data', { size: 10, color: SUB }); return; }
-    const labelW = 88;
-    const barAreaX = originX + 12 + labelW + 6;
-    const barAreaW = halfW - 12 - labelW - 6 - 30;
-    const max = Math.max.apply(null, entries.map(e => e[1])) || 1;
-    const lineH = 17;
-    let by = originY - 40;
-    for (const e of entries) {
-      if (by < originY - ch + 10) break;
-      pdf.text(originX + 12, by - 2, pdf.fit(e[0], 8.5, labelW), { size: 8.5, color: INK });
-      pdf.rect(barAreaX, by - 9, barAreaW, 9, { fill: '#f1f3f6' });
-      pdf.rect(barAreaX, by - 9, Math.max(2, (e[1] / max) * barAreaW), 9, { fill: color });
-      pdf.text(barAreaX + barAreaW + 4, by - 2, String(e[1]), { size: 8.5, bold: true, color: INK });
-      by -= lineH;
-    }
-  }
-  drawBarPanel('Defects by lane', laneEntries, M, pdf.y, '#4f46e5');
-  drawBarPanel('Defects by assignee (top 10)', userEntries, M + halfW + 12, pdf.y, '#dc2626');
-  pdf.y -= 230;
-
-  // ============ PAGE 3+ — All Defects table ============
-  newPage();
-  pdf.text(M, pdf.y, 'All Defects', { size: 14, bold: true, color: INK }); pdf.y -= 6;
-  pdf.text(M, pdf.y, total + ' defect' + (total === 1 ? '' : 's') + ' sorted by overdue desc, then by severity (Urgent first).', { size: 8.5, color: SUB }); pdf.y -= 16;
-
-  const tCols = [
-    ['Defect',   M,        184],
-    ['Severity', M + 184,  72],
-    ['Assignee', M + 256,  88],
-    ['Status',   M + 344,  82],
-    ['Lane',     M + 426,  38],
-    ['Due',      M + 464,  46],
-    ['OD',       M + 510,  20]
-  ];
-  function tHeader() {
-    pdf.rect(M, pdf.y - 14, CW, 18, { fill: '#f1f3f6' });
-    for (const c of tCols) pdf.text(c[1] + 3, pdf.y - 8, c[0], { size: 8, bold: true, color: SUB });
-    pdf.y -= 22;
-  }
-  tHeader();
-
-  const sevRank = (t) => SEVERITY_ORDER.indexOf(defectSeverity(t));
-  const sorted = defects.slice().sort((a, b) => {
-    const oa = overdueDays(a), ob = overdueDays(b);
-    if (oa !== ob) return ob - oa;
-    const sa = sevRank(a), sb = sevRank(b);
-    if (sa !== sb) return sa - sb;
-    return (a.name || '').localeCompare(b.name || '');
-  });
-
-  for (const t of sorted) {
-    if (pdf.y < M + 24) { newPage(); pdf.text(M, pdf.y, 'All Defects (cont.)', { size: 13, bold: true, color: INK }); pdf.y -= 16; tHeader(); }
-    const sev = defectSeverity(t);
-    const od = overdueDays(t);
-    const assignees = (t.assignees || []).map(a => a.username).join(', ') || '—';
-    const status = (typeof t.status === 'string' ? t.status : (t.status && t.status.status) || '-');
-    pdf.text(tCols[0][1] + 3, pdf.y, pdf.fit(t.name || '(untitled)', 8, tCols[0][2] - 6), { size: 8, color: INK });
-    // Severity: colored flag + label
-    drawSeverityFlag(tCols[1][1] + 3, pdf.y - 2, sev, 8);
-    pdf.text(tCols[1][1] + 15, pdf.y, sev, { size: 8, color: sev === 'Empty' ? SUB : INK });
-    pdf.text(tCols[2][1] + 3, pdf.y, pdf.fit(assignees, 8, tCols[2][2] - 6), { size: 8, color: SUB });
-    pdf.text(tCols[3][1] + 3, pdf.y, pdf.fit(status, 8, tCols[3][2] - 6), { size: 8, color: '#991b1b' });
-    pdf.text(tCols[4][1] + 3, pdf.y, LANE(t), { size: 8, color: SUB });
-    pdf.text(tCols[5][1] + 3, pdf.y, t.due_date ? fmtDate(t.due_date) : '-', { size: 8, color: SUB });
-    pdf.text(tCols[6][1] + 3, pdf.y, od > 0 ? (od + 'd') : '-', { size: 8, bold: od > 0, color: od > 0 ? '#c2410c' : '#9ca3af' });
-    pdf.y -= 4; pdf.line(M, pdf.y, M + CW, pdf.y, { color: '#f0f1f4' }); pdf.y -= 10;
-  }
-
-  // Footers
-  const genStamp = new Date().toLocaleString(EN);
-  for (let pi = 0; pi < pdf.pages.length; pi++) {
-    pdf.cur = pdf.pages[pi];
-    pdf.text(M, 26, 'Dashboard - ClickUp  ·  Defects Report  ·  Generated ' + genStamp, { size: 7.5, color: '#9ca3af' });
-    pdf.text(W - M - 130, 26, 'Page ' + (pi + 1) + ' of ' + pdf.pages.length + '  ·  Internal Use Only', { size: 7.5, color: '#9ca3af' });
-  }
-  return pdf.build();
-}
-
-function exportDefectsPdf() {
-  const defects = (REPORT.tasks || []).filter(isDefect);
-  if (!defects.length) { showToast('No defects to export'); return; }
-  try {
-    const blob = buildDefectsPdf(defects);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'dashboard-clickup-defects-report.pdf';
-    document.body.appendChild(a); a.click();
-    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 200);
-    showToast(`Defects PDF downloaded (${defects.length} defect${defects.length === 1 ? '' : 's'})`);
-  } catch (e) { showToast('PDF error: ' + (e.message || e)); }
-}
 
 function isBlockedTask(t) { return (t.status || '').toLowerCase().includes('blocked'); }
 function cfLabels(t, key) { const r = TASK_CF[t.id]; if (!r || r.err) return null; return (r.vals && r.vals[key]) || []; }
