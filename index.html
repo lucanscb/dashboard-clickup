@@ -107,6 +107,10 @@ table tr:hover { background: #fafbfc; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 
 .timeline { font-size: 12px; }
+.tl-stat { text-align: center; padding: 18px 16px; }
+.tl-stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; font-weight: 600; }
+.tl-stat-value { font-size: 40px; font-weight: 800; line-height: 1.1; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
+.tl-stat-sub { font-size: 11px; color: #9ca3af; }
 .tl-row { display: grid; grid-template-columns: 90px 1fr 90px; gap: 10px; padding: 5px 8px; border-bottom: 1px solid #f0f1f4; align-items: center; }
 .tl-row:hover { background: #fafbfc; }
 .tl-date { color: #6b7280; font-size: 11px; font-variant-numeric: tabular-nums; }
@@ -772,26 +776,35 @@ table tr:hover { background: #fafbfc; }
     </div>
 
     <div id="panel-timeline" class="panel">
-      <p class="muted">Tasks with a due date, ordered chronologically. Use this as a logical-sequence proxy when start dates aren't tracked. <strong id="tl-count"></strong> dated tasks.</p>
-      <input class="search" id="tlSearch" placeholder="Filter by name…" />
-      <div class="card-row" style="margin-bottom: 8px;">
-        <div class="card">
-          <h3>Tasks due by month &middot; by status</h3>
-          <div class="chart-wrap"><canvas id="dueChart"></canvas></div>
-        </div>
-        <div class="card">
-          <h3>Completion trend (cumulative)</h3>
-          <div class="chart-wrap"><canvas id="doneChart"></canvas></div>
-        </div>
-      </div>
-      <div class="tl-filterbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">
-        <span class="muted" style="font-size:12px">Due date:</span>
+      <p class="muted">Created vs. closed tasks over time. Created tasks are counted by their creation date; closed tasks are counted by their due date (status <em>Complete</em>). <strong id="tl-count"></strong> tasks with a due date.</p>
+      <div class="tl-filterbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 12px">
+        <span class="muted" style="font-size:12px">Period:</span>
         <div class="seg" id="tl-period">
-          <button type="button" data-d="7" class="active">Last 7 days</button>
-          <button type="button" data-d="30">Last 30 days</button>
+          <button type="button" data-d="7">Last 7 days</button>
+          <button type="button" data-d="30" class="active">Last 30 days</button>
           <button type="button" data-d="90">Last 3 months</button>
           <button type="button" data-d="0">All</button>
         </div>
+      </div>
+      <div class="card-row" style="margin-bottom: 8px;">
+        <div class="card tl-stat">
+          <div class="tl-stat-label">Tasks created</div>
+          <div class="tl-stat-value" id="tl-created-val" style="color:#2563eb">—</div>
+          <div class="tl-stat-sub">by creation date</div>
+        </div>
+        <div class="card tl-stat">
+          <div class="tl-stat-label">Tasks closed</div>
+          <div class="tl-stat-value" id="tl-closed-val" style="color:#059669">—</div>
+          <div class="tl-stat-sub">by due date &middot; status Complete</div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom: 8px;">
+        <h3>Created vs. closed <span class="muted" id="tl-chart-sub" style="font-weight:400;font-size:12px"></span></h3>
+        <div class="chart-wrap" style="height:320px"><canvas id="flowChart"></canvas></div>
+      </div>
+      <input class="search" id="tlSearch" placeholder="Filter list by name…" />
+      <div class="tl-filterbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">
+        <span class="muted" style="font-size:12px">Tasks with a due date in this period:</span>
         <span class="muted" id="tl-listcount" style="font-size:12px;margin-left:auto"></span>
       </div>
       <div class="card timeline" id="tlList"></div>
@@ -828,6 +841,7 @@ table tr:hover { background: #fafbfc; }
       priority: (t.priority && t.priority.priority) || null,
       assignees: t.assignees || [], tags: t.tags || [],
       due_date: t.due_date || null, date_closed: t.date_closed || null,
+      date_created: t.date_created || null,
       parent: t.parent || null, list: t.list || null
     };
     // Populate TASK_CF (used by cfLabels, the tree, etc.) straight from the bulk response.
@@ -2147,15 +2161,106 @@ function renderTree(data) {
   if (ts && !ts._wired) { ts._wired = true; ts.addEventListener('input', ttSearch); }
 }
 
-// ---------- Timeline ----------
-let TL_PERIOD = 7;
-let TL_DATED = [];
-const TL_GROUPS = [
-  { key: 'Not started', color: '#9ca3af' },
-  { key: 'Active', color: '#f59e0b' },
-  { key: 'Done', color: '#12a594' },
-  { key: 'Complete', color: '#10b981' }
-];
+// ---------- Timeline (created vs. closed flow) ----------
+let TL_PERIOD = 30;              // selected period in days (0 = all time)
+let TL_DATED = [];               // tasks with a due date, for the bottom list
+const TL_DAY_MS = 86400000;
+
+// A task counts as "closed/finished" when its status maps to the Complete group
+// (ClickUp "closed" status type).
+function tlIsClosed(t) { return statusMeta(t.status).group === 'Complete'; }
+
+// Bucket-key helpers. fmtDate() returns a UTC YYYY-MM-DD string, so we key off it
+// to stay timezone-consistent with the rest of the dashboard.
+function tlBucketKey(ms, gran) {
+  const iso = fmtDate(ms);
+  if (!iso) return '';
+  if (gran === 'month') return iso.slice(0, 7);
+  if (gran === 'day') return iso;
+  // week → Monday of that ISO week (UTC)
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+}
+function tlBucketLabel(key, gran) {
+  const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const p = key.split('-');
+  if (gran === 'month') return MON[+p[1] - 1] + ' ' + p[0];
+  return MON[+p[1] - 1] + ' ' + (+p[2]);
+}
+// Ordered, gap-free list of bucket keys covering [start, end] (inclusive).
+function tlBucketRange(start, end, gran) {
+  const keys = [];
+  let cur = new Date(fmtDate(start) + 'T00:00:00Z');
+  if (gran === 'week') cur.setUTCDate(cur.getUTCDate() - ((cur.getUTCDay() + 6) % 7));
+  else if (gran === 'month') cur.setUTCDate(1);
+  const endD = new Date(fmtDate(end) + 'T00:00:00Z');
+  let guard = 0;
+  while (cur <= endD && guard++ < 2000) {
+    keys.push(tlBucketKey(cur.getTime(), gran));
+    if (gran === 'day') cur.setUTCDate(cur.getUTCDate() + 1);
+    else if (gran === 'week') cur.setUTCDate(cur.getUTCDate() + 7);
+    else cur.setUTCMonth(cur.getUTCMonth() + 1);
+  }
+  return keys;
+}
+
+// KPI cards + created-vs-closed chart, all driven by the selected period.
+function tlRenderFlow() {
+  const now = Date.now();
+  const start = TL_PERIOD > 0 ? now - TL_PERIOD * TL_DAY_MS : null;
+  const inWin = ms => ms != null && Number(ms) <= now && (start === null || Number(ms) >= start);
+
+  const src = ALL_TASKS || [];
+  const createdEvents = src.filter(t => inWin(t.date_created)).map(t => Number(t.date_created));
+  const closedEvents = src.filter(t => tlIsClosed(t) && inWin(t.due_date)).map(t => Number(t.due_date));
+
+  const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  setTxt('tl-created-val', createdEvents.length);
+  setTxt('tl-closed-val', closedEvents.length);
+
+  // Window for the chart buckets. For "all time" we span from the earliest event.
+  let lo = start, hi = now;
+  if (lo === null) {
+    const all = createdEvents.concat(closedEvents);
+    lo = all.length ? Math.min.apply(null, all) : now - 30 * TL_DAY_MS;
+  }
+  const spanDays = (hi - lo) / TL_DAY_MS;
+  const gran = spanDays <= 45 ? 'day' : spanDays <= 200 ? 'week' : 'month';
+
+  const keys = tlBucketRange(lo, hi, gran);
+  const idx = {}; keys.forEach((k, i) => { idx[k] = i; });
+  const created = keys.map(() => 0), closed = keys.map(() => 0);
+  for (const ms of createdEvents) { const i = idx[tlBucketKey(ms, gran)]; if (i != null) created[i]++; }
+  for (const ms of closedEvents) { const i = idx[tlBucketKey(ms, gran)]; if (i != null) closed[i]++; }
+  let run = 0; const net = keys.map((_, i) => (run += created[i] - closed[i]));
+
+  setTxt('tl-chart-sub', '· ' + (TL_PERIOD > 0 ? ('last ' + TL_PERIOD + ' days') : 'all time') + ' · by ' + gran);
+
+  const ctx = document.getElementById('flowChart'); if (!ctx) return;
+  { const _e = Chart.getChart(ctx); if (_e) _e.destroy(); }
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: keys.map(k => tlBucketLabel(k, gran)),
+      datasets: [
+        { label: 'Created', data: created, backgroundColor: '#3b82f6', borderRadius: 4, borderSkipped: false, maxBarThickness: 34, order: 2 },
+        { label: 'Closed', data: closed, backgroundColor: '#10b981', borderRadius: 4, borderSkipped: false, maxBarThickness: 34, order: 2 },
+        { type: 'line', label: 'Net backlog (cumulative)', data: net, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.12)', borderWidth: 2, tension: 0.35, pointRadius: 2, fill: false, yAxisID: 'y1', order: 1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'bottom' }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        y: { beginAtZero: true, ticks: { precision: 0 }, title: { display: true, text: 'Tasks' } },
+        y1: { position: 'right', beginAtZero: true, grid: { display: false }, ticks: { precision: 0 }, title: { display: true, text: 'Net backlog' } }
+      }
+    }
+  });
+}
 
 function tlRenderList() {
   const list = document.getElementById('tlList'); if (!list) return;
@@ -2184,6 +2289,7 @@ function renderTimeline(tasks) {
   TL_DATED = tasks.filter(t => t.due_date).slice().sort((a, b) => Number(a.due_date) - Number(b.due_date));
   const tc = document.getElementById('tl-count'); if (tc) tc.textContent = TL_DATED.length;
   tlRenderList();
+  tlRenderFlow();
 
   const se = document.getElementById('tlSearch');
   if (se && !se._wired) {
@@ -2201,29 +2307,9 @@ function renderTimeline(tasks) {
       TL_PERIOD = Number(b.getAttribute('data-d'));
       seg.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
       tlRenderList();
+      tlRenderFlow();
     });
   }
-
-  const months = Array.from(new Set(TL_DATED.map(t => fmtDate(t.due_date).slice(0, 7)))).sort();
-  const byMonthGroup = {};
-  for (const m of months) byMonthGroup[m] = { 'Not started': 0, 'Active': 0, 'Done': 0, 'Complete': 0 };
-  for (const t of TL_DATED) { const m = fmtDate(t.due_date).slice(0, 7); const g = statusMeta(t.status).group; if (byMonthGroup[m] && byMonthGroup[m][g] != null) byMonthGroup[m][g]++; }
-  { const _e = Chart.getChart(document.getElementById('dueChart')); if (_e) _e.destroy(); }
-  new Chart(document.getElementById('dueChart'), {
-    type: 'bar',
-    data: { labels: months, datasets: TL_GROUPS.map(g => ({ label: g.key, data: months.map(m => byMonthGroup[m][g.key] || 0), backgroundColor: g.color, borderRadius: 4, borderSkipped: false, maxBarThickness: 46 })) },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } }, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } }
-  });
-
-  const compByMonth = {}; for (const m of months) compByMonth[m] = 0;
-  for (const t of TL_DATED) { if (statusMeta(t.status).group === 'Complete') { const m = fmtDate(t.due_date).slice(0, 7); if (compByMonth[m] != null) compByMonth[m]++; } }
-  let run = 0; const cumulative = months.map(m => (run += (compByMonth[m] || 0)));
-  { const _e = Chart.getChart(document.getElementById('doneChart')); if (_e) _e.destroy(); }
-  new Chart(document.getElementById('doneChart'), {
-    type: 'line',
-    data: { labels: months, datasets: [{ label: 'Completed (cumulative)', data: cumulative, borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.15)', fill: true, tension: 0.35, pointRadius: 3, pointBackgroundColor: '#10b981' }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } } }
-  });
 }
 
 // ---------- Risks & inconsistencies ----------
