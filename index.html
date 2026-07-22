@@ -111,7 +111,16 @@ table tr:hover { background: #fafbfc; }
 .tl-stat-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; font-weight: 600; }
 .tl-stat-value { font-size: 40px; font-weight: 800; line-height: 1.1; margin: 6px 0 2px; font-variant-numeric: tabular-nums; }
 .tl-stat-sub { font-size: 11px; color: #9ca3af; }
+.tl-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tl-listcard { display: flex; flex-direction: column; }
+.tl-listhead { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.tl-listhead h3 { margin: 0; }
+.tl-listseg { margin-bottom: 10px; }
+.tl-scroll { max-height: 360px; overflow-y: auto; border-top: 1px solid #eef0f3; }
+.tl-badges { display: flex; flex-direction: column; gap: 3px; align-items: flex-start; }
 .tl-row { display: grid; grid-template-columns: 90px 1fr 90px; gap: 10px; padding: 5px 8px; border-bottom: 1px solid #f0f1f4; align-items: center; }
+.tl-scroll .tl-row { grid-template-columns: 74px 1fr auto; }
+@media (max-width: 780px) { .tl-lists { grid-template-columns: 1fr; } }
 .tl-row:hover { background: #fafbfc; }
 .tl-date { color: #6b7280; font-size: 11px; font-variant-numeric: tabular-nums; }
 .tl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -802,12 +811,34 @@ table tr:hover { background: #fafbfc; }
         <h3>Created vs. closed <span class="muted" id="tl-chart-sub" style="font-weight:400;font-size:12px"></span></h3>
         <div class="chart-wrap" style="height:320px"><canvas id="flowChart"></canvas></div>
       </div>
-      <input class="search" id="tlSearch" placeholder="Filter list by name…" />
-      <div class="tl-filterbar" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">
-        <span class="muted" style="font-size:12px">Tasks with a due date in this period:</span>
-        <span class="muted" id="tl-listcount" style="font-size:12px;margin-left:auto"></span>
+      <div class="tl-lists">
+        <div class="card tl-listcard">
+          <div class="tl-listhead">
+            <h3>Created tasks</h3>
+            <span class="muted" id="tl-created-count" style="font-size:12px"></span>
+          </div>
+          <div class="seg tl-listseg" id="tl-created-period">
+            <button type="button" data-d="7">Last 7 days</button>
+            <button type="button" data-d="30">Last 30 days</button>
+            <button type="button" data-d="90">Last 3 months</button>
+            <button type="button" data-d="0" class="active">All</button>
+          </div>
+          <div class="tl-scroll timeline" id="tlCreatedList"></div>
+        </div>
+        <div class="card tl-listcard">
+          <div class="tl-listhead">
+            <h3>Completed tasks</h3>
+            <span class="muted" id="tl-completed-count" style="font-size:12px"></span>
+          </div>
+          <div class="seg tl-listseg" id="tl-completed-period">
+            <button type="button" data-d="7">Last 7 days</button>
+            <button type="button" data-d="30">Last 30 days</button>
+            <button type="button" data-d="90">Last 3 months</button>
+            <button type="button" data-d="0" class="active">All</button>
+          </div>
+          <div class="tl-scroll timeline" id="tlCompletedList"></div>
+        </div>
       </div>
-      <div class="card timeline" id="tlList"></div>
     </div>
 
     <div id="panel-risks" class="panel">
@@ -2262,43 +2293,66 @@ function tlRenderFlow() {
   });
 }
 
-function tlRenderList() {
-  const list = document.getElementById('tlList'); if (!list) return;
+// Each bottom list has its own independent period (0 = all time).
+let TL_CREATED_PERIOD = 0;
+let TL_COMPLETED_PERIOD = 0;
+
+// Render one of the two side-by-side lists. `which` is 'created' or 'completed'.
+// Created tasks are keyed/sorted by creation date; completed tasks (status
+// Complete) by due date — mirroring the KPI cards and the flow chart above.
+function tlRenderSideList(which) {
   const now = Date.now();
-  const filtered = TL_PERIOD > 0 ? TL_DATED.filter(t => Number(t.due_date) >= now - TL_PERIOD * 86400000) : TL_DATED;
+  const isCreated = which === 'created';
+  const period = isCreated ? TL_CREATED_PERIOD : TL_COMPLETED_PERIOD;
+  const listId = isCreated ? 'tlCreatedList' : 'tlCompletedList';
+  const countId = isCreated ? 'tl-created-count' : 'tl-completed-count';
+  const dateOf = t => Number(isCreated ? t.date_created : t.due_date);
+  const cutoff = period > 0 ? now - period * TL_DAY_MS : null;
+
+  const rows = (ALL_TASKS || [])
+    .filter(t => {
+      const d = isCreated ? t.date_created : (tlIsClosed(t) ? t.due_date : null);
+      return d && (cutoff === null || Number(d) >= cutoff);
+    })
+    .sort((a, b) => dateOf(b) - dateOf(a));
+
+  const list = document.getElementById(listId); if (!list) return;
   let h = '';
-  for (const t of filtered) {
+  for (const t of rows) {
     const sm = statusMeta(t.status);
     const al = cfLabels(t, 'area');
     const areaTxt = al === null ? '' : (al.length ? al.join(', ') : '—');
-    h += `<div class="tl-row" data-name="${escapeHtml((t.name || '').toLowerCase())}">
-      <span class="tl-date">${fmtDate(t.due_date)}</span>
+    h += `<div class="tl-row">
+      <span class="tl-date">${fmtDate(dateOf(t))}</span>
       <span class="tl-name"><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none">${escapeHtml(t.name || '')}</a></span>
-      <span><span class="status-pill" style="background:${sm.color}22;color:#1a1d23;border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>${areaTxt ? ` <span class="lane-badge">${escapeHtml(areaTxt)}</span>` : ''}</span>
+      <span class="tl-badges"><span class="status-pill" style="background:${sm.color}22;color:#1a1d23;border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>${areaTxt ? `<span class="lane-badge">${escapeHtml(areaTxt)}</span>` : ''}</span>
     </div>`;
   }
-  list.innerHTML = h || '<p class="muted" style="padding:14px">No tasks with a due date in this period.</p>';
-  const cnt = document.getElementById('tl-listcount');
-  if (cnt) cnt.textContent = `${filtered.length} task${filtered.length === 1 ? '' : 's'}`;
-  const se = document.getElementById('tlSearch');
-  const q = se ? (se.value || '').toLowerCase().trim() : '';
-  if (q) list.querySelectorAll('.tl-row').forEach(el => { el.style.display = el.dataset.name.includes(q) ? '' : 'none'; });
+  list.innerHTML = h || '<p class="muted" style="padding:14px">No tasks in this period.</p>';
+  const cnt = document.getElementById(countId);
+  if (cnt) cnt.textContent = `${rows.length} task${rows.length === 1 ? '' : 's'}`;
+}
+
+// Wire a segmented period control that drives a single side list.
+function tlWireSideSeg(segId, setPeriod, rerender) {
+  const seg = document.getElementById(segId);
+  if (!seg || seg._wired) return;
+  seg._wired = true;
+  seg.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-d]'); if (!b) return;
+    setPeriod(Number(b.getAttribute('data-d')));
+    seg.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+    rerender();
+  });
 }
 
 function renderTimeline(tasks) {
-  TL_DATED = tasks.filter(t => t.due_date).slice().sort((a, b) => Number(a.due_date) - Number(b.due_date));
+  TL_DATED = tasks.filter(t => t.due_date);
   const tc = document.getElementById('tl-count'); if (tc) tc.textContent = TL_DATED.length;
-  tlRenderList();
   tlRenderFlow();
+  tlRenderSideList('created');
+  tlRenderSideList('completed');
 
-  const se = document.getElementById('tlSearch');
-  if (se && !se._wired) {
-    se._wired = true;
-    se.addEventListener('input', () => {
-      const q = (se.value || '').toLowerCase().trim();
-      document.querySelectorAll('#tlList .tl-row').forEach(el => { el.style.display = !q || el.dataset.name.includes(q) ? '' : 'none'; });
-    });
-  }
   const seg = document.getElementById('tl-period');
   if (seg && !seg._wired) {
     seg._wired = true;
@@ -2306,10 +2360,11 @@ function renderTimeline(tasks) {
       const b = e.target.closest('button[data-d]'); if (!b) return;
       TL_PERIOD = Number(b.getAttribute('data-d'));
       seg.querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
-      tlRenderList();
       tlRenderFlow();
     });
   }
+  tlWireSideSeg('tl-created-period', v => { TL_CREATED_PERIOD = v; }, () => tlRenderSideList('created'));
+  tlWireSideSeg('tl-completed-period', v => { TL_COMPLETED_PERIOD = v; }, () => tlRenderSideList('completed'));
 }
 
 // ---------- Risks & inconsistencies ----------
