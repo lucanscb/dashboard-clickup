@@ -183,7 +183,7 @@ table tr:hover { background: var(--surface-2); }
 .q-more { color: var(--text-muted); font-style: italic; justify-content: center !important; }
 .status-filter { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .sf-chip { display: inline-flex; align-items: center; gap: 5px; font: inherit; font-size: 11px; padding: 3px 9px; border: 1px solid #d7dbe0; border-radius: 999px; background: var(--surface); color: var(--text-subtle); cursor: pointer; }
-.sf-chip.on { color: var(--text); border-color: #b9c0ca; background: #f2f4f7; font-weight: 600; }
+.sf-chip.on { color: var(--text); border-color: var(--border-strong); background: var(--surface-2); font-weight: 600; }
 .sf-chip .lg-dot { opacity: 0.3; }
 .sf-chip.on .lg-dot { opacity: 1; }
 .swim-progress { display: flex; align-items: center; gap: 8px; margin: 12px 2px 3px; }
@@ -504,7 +504,7 @@ table tr:hover { background: var(--surface-2); }
 .prio-urgent { background: #fee2e2; color: #991b1b; }
 .prio-high { background: #ffedd5; color: #9a3412; }
 .prio-normal { background: #dbeafe; color: #1e40af; }
-.prio-low { background: #f3f4f6; color: var(--text-muted); }
+.prio-low { background: #f3f4f6; color: #4b5563; }
 
 .report-empty { padding: 40px; text-align: center; color: var(--text-muted); background: var(--surface); border: 1px dashed var(--border-strong); border-radius: 10px; }
 .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); z-index: 100; opacity: 0; transition: opacity 0.2s, transform 0.2s; pointer-events: none; }
@@ -1372,6 +1372,11 @@ function pickTextColor(hex) {
   const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
   return lum > 0.6 ? '#1a1d23' : '#ffffff';
 }
+// Read a CSS custom property at runtime (canvas needs a concrete color, not var()).
+function cssVar(name, fallback) {
+  try { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v || fallback; }
+  catch (e) { return fallback; }
+}
 const sliceLabelPlugin = {
   id: 'sliceLabels',
   afterDatasetsDraw(chart) {
@@ -1410,7 +1415,7 @@ const sliceLabelPlugin = {
           ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(lx, ly); ctx.stroke();
           const right = Math.cos(mid) >= 0;
           ctx.textAlign = right ? 'left' : 'right';
-          ctx.fillStyle = '#1a1d23';
+          ctx.fillStyle = cssVar('--text', '#1a1d23');
           ctx.fillText(text, lx + (right ? 2 : -2), ly);
           ctx.textAlign = 'center';
         }
@@ -1427,7 +1432,7 @@ const sliceLabelPlugin = {
       ctx.font = font(fs);
       const maxW = inner * 1.7;
       while (fs > 9 && ctx.measureText(txt).width > maxW) { fs -= 1; ctx.font = font(fs); }
-      ctx.fillStyle = '#1a1d23';
+      ctx.fillStyle = cssVar('--text', '#1a1d23');
       ctx.fillText(txt, cx, cy);
     }
     ctx.restore();
@@ -1952,7 +1957,7 @@ function renderSwimlanes(tasks) {
       const c = m[area].byStatus[s.name] || 0;
       const p = total ? Math.round((c / total) * 100) : 0;
       h += `<div class="lane-cell" style="border-left:3px solid ${s.color}">
-        <span class="pill" style="background:${s.color}22;color:#1a1d23">${escapeHtml(s.label)}</span>
+        <span class="pill" style="background:${s.color}22;color:var(--text)">${escapeHtml(s.label)}</span>
         <div class="ct num">${c}</div>
         <div class="pct num">${p}%</div>
       </div>`;
@@ -2070,7 +2075,7 @@ function renderLeaf(t) {
   const al = cfLabels(t, 'area');
   const areaTxt = al === null ? '' : (al.length ? al.join(', ') : '—');
   return `<div class="leaf" data-name="${escapeHtml((t.name||'').toLowerCase())}">
-    <span class="status-pill" style="background:${sm.color}22;color:#1a1d23;border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>
+    <span class="status-pill" style="background:${sm.color}22;color:var(--text);border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>
     <span class="name"><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener">${escapeHtml(t.name||'(unnamed)')}</a></span>
     ${areaTxt ? `<span class="lane-badge">${escapeHtml(areaTxt)}</span>` : ''}
   </div>`;
@@ -2367,7 +2372,7 @@ function tlRenderSideList(which) {
     h += `<div class="tl-row">
       <span class="tl-date">${fmtDate(dateOf(t))}</span>
       <span class="tl-name"><a href="${escapeHtml(t.url)}" target="_blank" rel="noopener" style="color:inherit; text-decoration:none">${escapeHtml(t.name || '')}</a></span>
-      <span class="tl-badges"><span class="status-pill" style="background:${sm.color}22;color:#1a1d23;border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>${areaTxt ? `<span class="lane-badge">${escapeHtml(areaTxt)}</span>` : ''}</span>
+      <span class="tl-badges"><span class="status-pill" style="background:${sm.color}22;color:var(--text);border:1px solid ${sm.color}66">${escapeHtml(sm.label)}</span>${areaTxt ? `<span class="lane-badge">${escapeHtml(areaTxt)}</span>` : ''}</span>
     </div>`;
   }
   list.innerHTML = h || '<p class="muted" style="padding:14px">No tasks in this period.</p>';
@@ -5361,7 +5366,7 @@ function renderDefectsPanel(tasks) {
     const rows = sorted.map(t => {
       const url = clickupTaskUrl(t);
       const name = escapeHtml(t.name || '(untitled)');
-      const nameCell = url ? `<a href="${url}" target="_blank" rel="noopener" style="color:#1a1d23;text-decoration:none">${name}</a>` : name;
+      const nameCell = url ? `<a href="${url}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none">${name}</a>` : name;
       const od = overdueDays(t);
       const due = t.due_date ? escapeHtml(fmtDate(t.due_date)) : dash;
       const prioColor = priorityColorOf(t);
