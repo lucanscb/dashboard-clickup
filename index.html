@@ -5514,11 +5514,11 @@ function renderIntegrityBanner(integrity, meta) {
 
   // ---- preset props ----
   var COLORS = ['#ffffff', '#CAE1FF'];
-  var PARTICLE_COUNT = 900, ORBIT_SPEED = 2.5, TILT = 13, TILT_SIDE = 154;
+  var PARTICLE_COUNT = 900, ORBIT_SPEED = 1, TILT = 13, TILT_SIDE = 154;
   var OUTER_PCT = 97, VOID_RADIUS = 40, VOID_X = 50, VOID_Y = 50, PERSPECTIVE = 1300;
   var particleSize = 0.5 + (Math.max(1, Math.min(50, 4)) - 1) * (4 / 49); // raw 4
   var pullSpeed = Math.max(0, 1) / 2;                                     // raw 1
-  var trailAlpha = Math.max(0.02, 1 - (Math.max(0, 50) / 50) * 0.98);    // raw 50 (long streaks, matches reference)
+  var trailAlpha = Math.max(0.02, 1 - (Math.max(0, 20) / 50) * 0.98);    // raw 20 (shorter trail)
 
   var size = { w: window.innerWidth, h: window.innerHeight };
   var particles = [];
