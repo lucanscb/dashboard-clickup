@@ -6,31 +6,22 @@
 <title>Dashboard - ClickUp — Project Tracker</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
 <script>
-(function(){function t(){if(!window.Chart)return;var d=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches;Chart.defaults.color=d?'#a1a1a6':'#6b7280';Chart.defaults.borderColor=d?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.06)';if(Chart.defaults.font)Chart.defaults.font.family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";}t();try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',function(){location.reload();});}catch(e){}})();
+(function(){if(!window.Chart)return;Chart.defaults.color='#c7c8cd';Chart.defaults.borderColor='rgba(255,255,255,0.08)';if(Chart.defaults.font)Chart.defaults.font.family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";})();
 </script>
 <style>
 :root {
-  color-scheme: light dark;
-  --bg:#f5f5f7; --surface:#ffffff; --surface-2:#f2f3f5; --hover:#ececf0;
-  --border:#e5e7eb; --border-subtle:#eef0f2; --border-strong:#d7dae0;
-  --text:#1d1d1f; --text-muted:#6b7280; --text-subtle:#9ca3af;
-  --accent:#1d1d1f; --accent-hover:#000000; --link:#0071e3;
-  --ring:rgba(0,113,227,0.30);
-  --shadow-sm:0 1px 2px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.05);
-  --shadow-md:0 6px 24px rgba(0,0,0,0.10);
-  --glass:rgba(245,245,247,0.72);
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:#0b0b0d; --surface:#161719; --surface-2:#1e1f22; --hover:#26272b;
-    --border:#2a2b2f; --border-subtle:#212226; --border-strong:#3a3b40;
-    --text:#f5f5f7; --text-muted:#a1a1a6; --text-subtle:#86868b;
-    --accent:#48484a; --accent-hover:#5a5a5e; --link:#0a84ff;
-    --ring:rgba(10,132,255,0.40);
-    --shadow-sm:0 1px 2px rgba(0,0,0,0.4);
-    --shadow-md:0 8px 30px rgba(0,0,0,0.5);
-    --glass:rgba(22,23,25,0.72);
-  }
+  /* Dark "glass" palette — the UI floats over the black-hole backdrop.
+     Surfaces are translucent so the animation shows subtly through/around them. */
+  color-scheme: dark;
+  --bg: transparent;
+  --surface: rgba(24,25,28,0.66); --surface-2: rgba(40,42,47,0.55); --hover: rgba(255,255,255,0.06);
+  --border: rgba(255,255,255,0.10); --border-subtle: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.16);
+  --text:#f5f5f7; --text-muted:#b7b8be; --text-subtle:#8a8b91;
+  --accent:#48484d; --accent-hover:#5c5c62; --link:#5ea8ff;
+  --ring:rgba(94,168,255,0.45);
+  --shadow-sm:0 1px 2px rgba(0,0,0,0.5);
+  --shadow-md:0 10px 40px rgba(0,0,0,0.6);
+  --glass:rgba(20,21,24,0.55);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
@@ -533,9 +524,25 @@ a { color: var(--link); }
   code { background: var(--surface-2); }
   .err { background: #2a1416; border-color: #4a1f22; color: #fca5a5; }
 }
+/* ---- Black-hole backdrop + glass layering ---- */
+#bh-stage, #bh-bg, #bh-fg, #bh-scrim { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
+#bh-stage { background: #000; z-index: -4; }
+#bh-bg { z-index: -3; }
+#bh-fg { z-index: -2; }
+#bh-scrim { z-index: -1; background: rgba(0,0,0,0.22); }
+.wrap { position: relative; z-index: 1; }
+.card, .kpi, .pie-card, .group, .filterbar, .rep-section, .report-card, .saved-card, .user-card,
+.tabs, .seg, .ms-dropdown, .rc-export-pop, .search {
+  -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+}
+h1, h2, .sec-title, .tagline, .section-head > h3, .dash-head { text-shadow: 0 1px 10px rgba(0,0,0,0.55); }
 </style>
 </head>
 <body>
+<div id="bh-stage"></div>
+<canvas id="bh-bg"></canvas>
+<canvas id="bh-fg"></canvas>
+<div id="bh-scrim"></div>
 <div class="wrap">
   <h1>Dashboard - ClickUp — Project Tracker</h1>
   <p class="tagline">Hierarchy, swimlanes, and progress for your <code>Dashboard - ClickUp</code> list.</p>
@@ -5490,6 +5497,132 @@ function renderIntegrityBanner(integrity, meta) {
     }
     console.error(e);
   }
+})();
+</script>
+<script>
+/* ============================================================
+   Black-hole accretion-disk backdrop (vanilla port of the
+   Originkit component). Two full-viewport canvases: background
+   particles + central sphere, and a foreground layer for
+   particles passing in front — giving true 3D occlusion.
+   ============================================================ */
+(function () {
+  var bg = document.getElementById('bh-bg'), fg = document.getElementById('bh-fg');
+  if (!bg || !fg) return;
+  var ctx = bg.getContext('2d'), fgCtx = fg.getContext('2d');
+  if (!ctx || !fgCtx) return;
+
+  // ---- preset props ----
+  var COLORS = ['#ffffff', '#CAE1FF'];
+  var PARTICLE_COUNT = 695, ORBIT_SPEED = 1, TILT = 13, TILT_SIDE = 154;
+  var OUTER_PCT = 97, VOID_RADIUS = 40, VOID_X = 50, VOID_Y = 50, PERSPECTIVE = 1300;
+  var particleSize = 0.5 + (Math.max(1, Math.min(50, 2)) - 1) * (4 / 49); // raw 2
+  var pullSpeed = Math.max(0, 1) / 2;                                     // raw 1
+  var trailAlpha = Math.max(0.02, 1 - (Math.max(0, 50) / 50) * 0.98);    // raw 50
+
+  var size = { w: window.innerWidth, h: window.innerHeight };
+  var particles = [];
+  var raf = 0, reduce = false;
+  try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+
+  function outerRad(w) {
+    var maxR = w / 2, pct = Math.max(0, Math.min(100, OUTER_PCT)) / 100;
+    return VOID_RADIUS + pct * (maxR - VOID_RADIUS);
+  }
+  function seed() {
+    var oRad = outerRad(size.w), cl = COLORS.length, pts = [];
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      var radius = VOID_RADIUS + Math.pow(Math.random(), 2) * (oRad - VOID_RADIUS);
+      pts.push({ angle: Math.random() * Math.PI * 2, radius: radius,
+        height: (Math.random() - 0.5) * 16, speedOffset: 0.75 + Math.random() * 0.5,
+        colorIdx: Math.floor(Math.random() * cl) });
+    }
+    particles = pts;
+  }
+  function resize() {
+    var w = window.innerWidth, h = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    [bg, fg].forEach(function (c) {
+      c.width = w * dpr; c.height = h * dpr; c.style.width = w + 'px'; c.style.height = h + 'px';
+    });
+    var changed = (size.w !== w || size.h !== h);
+    size = { w: w, h: h };
+    if (changed || !particles.length) seed();
+  }
+  function drawSphere(cx, cy) {
+    var vr = VOID_RADIUS;
+    var g = ctx.createRadialGradient(cx - vr * 0.25, cy - vr * 0.3, vr * 0.05, cx, cy, vr);
+    g.addColorStop(0, 'rgba(8,8,8,1)'); g.addColorStop(0.65, 'rgba(0,0,0,1)');
+    g.addColorStop(0.92, 'rgba(18,18,18,1)'); g.addColorStop(1, 'rgba(18,18,18,0.9)');
+    ctx.globalAlpha = 1; ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, vr, 0, Math.PI * 2); ctx.fill();
+    var rg = ctx.createRadialGradient(cx, cy, vr * 0.88, cx, cy, vr * 1.02);
+    rg.addColorStop(0, 'rgba(255,255,255,0)'); rg.addColorStop(0.6, 'rgba(180,180,200,0.06)');
+    rg.addColorStop(0.85, 'rgba(180,180,200,0.12)'); rg.addColorStop(1, 'rgba(180,180,200,0)');
+    ctx.fillStyle = rg; ctx.beginPath(); ctx.arc(cx, cy, vr * 1.02, 0, Math.PI * 2); ctx.fill();
+  }
+  var last = performance.now();
+  function frame(now, once) {
+    var dt = Math.min((now - last) / 16.667, 3); last = now;
+    var w = size.w, h = size.h, dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); fgCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.globalAlpha = 1; fgCtx.globalAlpha = 1;
+    // fade previous frame (trails) while keeping canvases transparent
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.fillStyle = 'rgba(0,0,0,' + trailAlpha + ')'; ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+    fgCtx.globalCompositeOperation = 'destination-out';
+    fgCtx.fillStyle = 'rgba(0,0,0,' + trailAlpha + ')'; fgCtx.fillRect(0, 0, w, h);
+    fgCtx.globalCompositeOperation = 'source-over';
+
+    var oRad = outerRad(w), voidCx = (VOID_X / 100) * w, voidCy = (VOID_Y / 100) * h;
+    var tiltRad = TILT * Math.PI / 180, tiltSideRad = TILT_SIDE * Math.PI / 180;
+    var back = [], front = [];
+    for (var i = 0; i < particles.length; i++) {
+      var pt = particles[i];
+      var sf = Math.sqrt(VOID_RADIUS / Math.max(pt.radius, 10));
+      pt.angle += ORBIT_SPEED * sf * pt.speedOffset * 0.012 * dt;
+      pt.radius -= pullSpeed * sf * pt.speedOffset * dt;
+      if (pt.radius < VOID_RADIUS) {
+        pt.radius = VOID_RADIUS + 0.7 * (oRad - VOID_RADIUS) + Math.random() * 0.3 * (oRad - VOID_RADIUS);
+        pt.angle = Math.random() * Math.PI * 2; pt.height = (Math.random() - 0.5) * 16; continue;
+      }
+      var cosA = Math.cos(pt.angle), sinA = Math.sin(pt.angle);
+      var xb = pt.radius * cosA, yb = pt.height, zb = pt.radius * sinA;
+      var x1 = xb, y1 = yb * Math.cos(tiltRad) + zb * Math.sin(tiltRad), z1 = -yb * Math.sin(tiltRad) + zb * Math.cos(tiltRad);
+      var x3d = x1 * Math.cos(tiltSideRad) - y1 * Math.sin(tiltSideRad);
+      var y3d = x1 * Math.sin(tiltSideRad) + y1 * Math.cos(tiltSideRad);
+      var z3d = z1;
+      var scale = PERSPECTIVE / (PERSPECTIVE + z3d);
+      var px = voidCx + x3d * scale, py = voidCy + y3d * scale;
+      if (px < -30 || px > w + 30 || py < -30 || py > h + 30) continue;
+      var P = { x: px, y: py, size: Math.max(0.3, particleSize * scale),
+        alpha: Math.max(0.35, 1 - ((z3d + oRad) / (2 * oRad)) * 0.45),
+        z: z3d, color: COLORS[pt.colorIdx % COLORS.length] };
+      if (z3d >= 0) back.push(P); else front.push(P);
+    }
+    back.sort(function (a, b) { return b.z - a.z; });
+    front.sort(function (a, b) { return b.z - a.z; });
+    for (var i = 0; i < back.length; i++) {
+      var p = back[i]; ctx.globalAlpha = p.alpha; ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    drawSphere(voidCx, voidCy);
+    for (var i = 0; i < front.length; i++) {
+      var p = front[i]; fgCtx.globalAlpha = p.alpha; fgCtx.fillStyle = p.color;
+      fgCtx.beginPath(); fgCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2); fgCtx.fill();
+    }
+    fgCtx.globalAlpha = 1;
+    if (!once) raf = requestAnimationFrame(frame);
+  }
+  function start() { if (raf) return; last = performance.now(); raf = requestAnimationFrame(frame); }
+  function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', function () { document.hidden ? stop() : (reduce || start()); });
+  resize();
+  if (reduce) { frame(performance.now(), true); }  // static single frame
+  else { start(); }
 })();
 </script>
 </body>
