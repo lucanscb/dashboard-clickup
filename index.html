@@ -109,9 +109,9 @@ table tr:hover { background: var(--surface-2); }
 .lb-Design { background: #fef3c7; color: #92400e; }
 .lb-Other { background: #e5e7eb; color: #374151; }
 
-.alert { background: #fff7ed; border-left: 3px solid #f59e0b; padding: 10px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 12px; }
-.alert.danger { background: #fef2f2; border-left-color: #ef4444; }
-.alert.info { background: #eff6ff; border-left-color: #3b82f6; }
+.alert { background: rgba(26,27,31,0.92); border-left: 3px solid #f59e0b; padding: 12px 14px; border-radius: 10px; margin-bottom: 10px; font-size: 12px; -webkit-backdrop-filter: blur(20px) saturate(140%); backdrop-filter: blur(20px) saturate(140%); }
+.alert.danger { background: rgba(42,20,22,0.92); border-left-color: #ef4444; }
+.alert.info { background: rgba(18,35,58,0.92); border-left-color: #3b82f6; }
 .alert strong { font-weight: 600; }
 
 #loader { padding: 60px 20px; text-align: center; color: var(--text-muted); }
@@ -182,7 +182,7 @@ table tr:hover { background: var(--surface-2); }
 .swim-bar i { display: block; height: 100%; background: #10b981; border-radius: 4px; transition: width .3s ease; }
 .swim-pct { font-size: 11px; color: var(--text-muted); min-width: 34px; text-align: right; font-weight: 700; }
 .tt-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.tt-table th { text-align: left; padding: 8px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.tt-table th { text-align: left; padding: 8px 12px; background: rgba(20,21,24,0.97); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 1; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
 .tt-table td { padding: 6px 12px; border-bottom: 1px solid var(--border-subtle); white-space: nowrap; }
 .tt-name { max-width: 560px; overflow: hidden; text-overflow: ellipsis; }
 .tt-caret { display: inline-block; width: 14px; cursor: pointer; color: var(--text-subtle); user-select: none; font-size: 10px; }
@@ -516,7 +516,7 @@ table tr:hover { background: var(--surface-2); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text-subtle); }
 a { color: var(--link); }
 @media (prefers-color-scheme: dark) {
-  .alert { background: var(--surface-2); }
+  .alert { background: rgba(26,27,31,0.92); }
   .alert.danger { background: #2a1416; }
   .alert.info { background: #12233a; }
   .dq-card.warn, .q-card.warn { background: #2a2410; border-color: #4a3f16; }
@@ -830,7 +830,7 @@ h1, h2, .sec-title, .tagline, .section-head > h3, .dash-head { text-shadow: 0 1p
         <span class="muted" id="tt-status" style="font-size:12px"></span>
       </div>
       <input class="search" id="treeSearch" placeholder="Filter by name…" />
-      <div style="overflow:auto;border:1px solid #e3e6eb;border-radius:8px;max-height:70vh">
+      <div class="card" style="overflow:auto;padding:0;max-height:70vh">
         <table class="tt-table" id="tt-table">
           <thead><tr><th>Name</th><th>Assignee App</th><th>Priority</th><th>Area</th><th>Feature</th><th>Due date</th></tr></thead>
           <tbody id="tt-body"></tbody>
@@ -840,7 +840,7 @@ h1, h2, .sec-title, .tagline, .section-head > h3, .dash-head { text-shadow: 0 1p
 
     <div id="panel-status" class="panel">
       <p class="muted">Every ClickUp status with its type (from ClickUp), count and share.</p>
-      <table id="statusTable"></table>
+      <div class="card"><table id="statusTable"></table></div>
     </div>
 
     <div id="panel-timeline" class="panel">
