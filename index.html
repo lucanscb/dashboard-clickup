@@ -5457,8 +5457,10 @@ function renderIntegrityBanner(integrity, meta) {
 
     document.getElementById('loader').style.display = 'none';
     document.getElementById('app').style.display = '';
+    document.dispatchEvent(new Event('dashboard-ready'));
   } catch (e) {
     document.getElementById('loader').style.display = 'none';
+    document.dispatchEvent(new Event('dashboard-ready'));
     const err = document.getElementById('err');
     err.style.display = 'block';
     if (e && e.message === 'NOT_IN_COWORK') {
@@ -5618,10 +5620,21 @@ function renderIntegrityBanner(integrity, meta) {
   function start() { if (raf) return; last = performance.now(); raf = requestAnimationFrame(frame); }
   function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
 
+  // The backdrop only plays while the dashboard is loading; once it's ready the
+  // animation fades out and stops, leaving a plain black background.
+  var done = false;
+  function fadeOut() {
+    done = true;
+    [bg, fg, document.getElementById('bh-scrim')].forEach(function (el) {
+      if (el) { el.style.transition = 'opacity 0.9s ease'; el.style.opacity = '0'; }
+    });
+    setTimeout(stop, 1000);
+  }
   window.addEventListener('resize', resize);
-  document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
+  document.addEventListener('visibilitychange', function () { if (document.hidden) stop(); else if (!done) start(); });
+  document.addEventListener('dashboard-ready', fadeOut, { once: true });
   resize();
-  start();  // decorative backdrop — always animates (pauses only when the tab is hidden)
+  start();  // plays during load, then fades out on 'dashboard-ready'
 })();
 </script>
 </body>
