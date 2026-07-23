@@ -16,7 +16,7 @@
   --bg: transparent;
   --surface: rgba(24,25,28,0.66); --surface-2: rgba(40,42,47,0.55); --hover: rgba(255,255,255,0.06);
   --border: rgba(255,255,255,0.10); --border-subtle: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.16);
-  --text:#f5f5f7; --text-muted:#b7b8be; --text-subtle:#8a8b91;
+  --text:#ffffff; --text-muted:rgba(255,255,255,0.85); --text-subtle:rgba(255,255,255,0.62);
   --accent:#48484d; --accent-hover:#5c5c62; --link:#5ea8ff;
   --ring:rgba(94,168,255,0.45);
   --shadow-sm:0 1px 2px rgba(0,0,0,0.5);
@@ -847,12 +847,12 @@ h1, h2, .sec-title, .tagline, .section-head > h3, .dash-head { text-shadow: 0 1p
       <div class="card-row" style="margin-bottom: 8px;">
         <div class="card tl-stat">
           <div class="tl-stat-label">Tasks created</div>
-          <div class="tl-stat-value" id="tl-created-val" style="color:#2563eb">—</div>
+          <div class="tl-stat-value" id="tl-created-val" style="color:#6cb0ff">—</div>
           <div class="tl-stat-sub">by creation date</div>
         </div>
         <div class="card tl-stat">
           <div class="tl-stat-label">Tasks closed</div>
-          <div class="tl-stat-value" id="tl-closed-val" style="color:#059669">—</div>
+          <div class="tl-stat-value" id="tl-closed-val" style="color:#34d399">—</div>
           <div class="tl-stat-sub">by due date &middot; status Complete</div>
         </div>
       </div>
@@ -2958,16 +2958,16 @@ function renderTaskRow(t) {
       <div class="t-meta">
         ${(areaLabels && areaLabels.length) ? areaLabels.map(a => `<span class="lane-badge">${escapeHtml(a)}</span>`).join('') : ''}
         ${themeTags}
-        ${(t.tags || []).filter(tag => (tag.name || '').toLowerCase() !== 'defect').slice(0, 3).map(tag => `<span style="font-size:10px;color:#6b7280;background:#f1f3f6;padding:1px 6px;border-radius:4px">${escapeHtml(tag.name||'')}</span>`).join('')}
+        ${(t.tags || []).filter(tag => (tag.name || '').toLowerCase() !== 'defect').slice(0, 3).map(tag => `<span style="font-size:10px;color:var(--text-muted);background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px">${escapeHtml(tag.name||'')}</span>`).join('')}
       </div>
     </div>
     <div>${statusPillHTML(t.status)}</div>
     <div class="t-assignees">
       ${appLabels === null
-        ? '<span style="font-size:11px;color:#9ca3af">…</span>'
+        ? '<span style="font-size:11px;color:var(--text-subtle)">…</span>'
         : (appLabels.length
-            ? appLabels.slice(0, 4).map(n => avatarHTML(n)).join('') + (appLabels.length > 4 ? `<span style="font-size:11px;color:#6b7280;margin-left:6px">+${appLabels.length - 4}</span>` : '')
-            : '<span style="font-size:11px;color:#9ca3af;font-style:italic">unassigned</span>')}
+            ? appLabels.slice(0, 4).map(n => avatarHTML(n)).join('') + (appLabels.length > 4 ? `<span style="font-size:11px;color:var(--text-muted);margin-left:6px">+${appLabels.length - 4}</span>` : '')
+            : '<span style="font-size:11px;color:var(--text-subtle);font-style:italic">unassigned</span>')}
     </div>
     <div class="t-due ${overdue ? 'overdue' : ''}" title="${overdue ? 'Overdue' : 'Due date'}">${escapeHtml(due)}</div>
   </div>`;
@@ -3824,7 +3824,7 @@ function paintReports() {
         ${u === 'Unassigned' ? '<span class="avatar xl" style="background:#9ca3af">??</span>' : avatarHTML(u, 'xl')}
         <div class="rc-title">
           <div class="rc-name">${escapeHtml(u)}</div>
-          <div class="rc-sub">${total} task${total === 1 ? '' : 's'} · ${pct(counts.Complete, total)}% complete${overdue ? ` · <span style="color:#c2410c">${overdue} overdue</span>` : ''}</div>
+          <div class="rc-sub">${total} task${total === 1 ? '' : 's'} · ${pct(counts.Complete, total)}% complete${overdue ? ` · <span style="color:#fbbf24">${overdue} overdue</span>` : ''}</div>
         </div>
         <div class="rc-actions">
           <button class="btn sm" data-preview="${uAttr}">👁 Preview</button>
@@ -4776,26 +4776,26 @@ function renderGeneralReport() {
       const t = e.task;
       const od = overdueDays(t);
       const assignees = fmtLabels(cfLabels(t, 'assignee app'));
-      const due = t.due_date ? escapeHtml(fmtDate(t.due_date)) : '<span style="color:#9ca3af">—</span>';
+      const due = t.due_date ? escapeHtml(fmtDate(t.due_date)) : '<span style="color:var(--text-subtle)">—</span>';
       const prio = priorityOf(t);
       const url = clickupTaskUrl(t);
       const name = escapeHtml(t.name || '(untitled)');
-      const prefix = e.prefix ? `<span style="color:#9ca3af;font-family:ui-monospace,monospace">${escapeHtml(e.prefix)}</span>` : '';
+      const prefix = e.prefix ? `<span style="color:var(--text-subtle);font-family:ui-monospace,monospace">${escapeHtml(e.prefix)}</span>` : '';
       const nameInner = url ? `<a href="${url}" target="_blank" rel="noopener" style="color:${e.depth ? '#4a5568' : '#1a1d23'};text-decoration:none">${name}</a>` : name;
       const indent = e.depth ? `padding-left:${10 + e.depth * 16}px;` : '';
-      const sub = e.depth ? 'color:#4a5568;font-weight:400;' : '';
+      const sub = e.depth ? 'color:var(--text-muted);font-weight:400;' : '';
       return `<tr${e.depth ? ' class="sub-row"' : ''}>
         <td class="t-name" style="${indent}${sub}">${prefix}${nameInner}</td>
         <td>${assignees}</td>
         <td>${escapeHtml(statusMeta(t.status).label)}</td>
-        <td>${prio === 'none' ? '<span style="color:#9ca3af">—</span>' : escapeHtml(prio)}</td>
+        <td>${prio === 'none' ? '<span style="color:var(--text-subtle)">—</span>' : escapeHtml(prio)}</td>
         <td>${due}</td>
         <td>${fmtLabels(cfLabels(t, 'area'))}</td>
-        <td>${od > 0 ? `<span class="t-od">${od}d</span>` : '<span style="color:#9ca3af">—</span>'}</td>
+        <td>${od > 0 ? `<span class="t-od">${od}d</span>` : '<span style="color:var(--text-subtle)">—</span>'}</td>
       </tr>`;
     }).join('');
     table.innerHTML = `<thead><tr>
-      <th>Task${useTree ? ' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:#9ca3af;font-size:9px">(parent → subtasks)</span>' : ''}</th><th>Assignee(s)</th><th>Status</th><th>Priority</th><th>Due</th><th>Area</th><th>Overdue</th>
+      <th>Task${useTree ? ' <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-subtle);font-size:9px">(parent → subtasks)</span>' : ''}</th><th>Assignee(s)</th><th>Status</th><th>Priority</th><th>Due</th><th>Area</th><th>Overdue</th>
     </tr></thead><tbody>${rows || `<tr><td colspan="7" class="muted" style="padding:14px;text-align:center">No tasks match the selected configuration.</td></tr>`}</tbody>`;
     const tmeta = document.getElementById('gr-table-meta');
     if (tmeta) tmeta.textContent = r.tasks.length > maxRows ? `Showing ${maxRows} of ${r.tasks.length} (full list in CSV / PDF)` : `${r.tasks.length} task${r.tasks.length === 1 ? '' : 's'}`;
@@ -5288,7 +5288,7 @@ let _dfxSeverityChartInst = null;
 
 function isBlockedTask(t) { return (t.status || '').toLowerCase().includes('blocked'); }
 function cfLabels(t, key) { const r = TASK_CF[t.id]; if (!r || r.err) return null; return (r.vals && r.vals[key]) || []; }
-function fmtLabels(arr) { if (arr === null) return '<span style="color:#9ca3af">…</span>'; if (!arr.length) return '<span style="color:#9ca3af">—</span>'; return arr.map(escapeHtml).join(', '); }
+function fmtLabels(arr) { if (arr === null) return '<span style="color:var(--text-subtle)">…</span>'; if (!arr.length) return '<span style="color:var(--text-subtle)">—</span>'; return arr.map(escapeHtml).join(', '); }
 function priorityLabelOf(t) { const k = priorityKeyOf(t); const d = PRIORITY_DEFS.find(x => x.key === k); return d ? d.label : (k === 'none' ? 'No priority' : k); }
 function priorityColorOf(t) { const k = priorityKeyOf(t); const d = PRIORITY_DEFS.find(x => x.key === k); return d ? d.color : (k === 'none' ? '#7c3aed' : '#94a3b8'); }
 function blockedFieldEntries(blocked, fieldKey) {
@@ -5368,7 +5368,7 @@ function renderDefectsPanel(tasks) {
   grPaintBars('dfx-by-user', asgEntries, (label) => { const o = (FIELD_DEFS['assignee app'] && FIELD_DEFS['assignee app'].options.find(x => x.label === label)); return o ? o.color : '#3b82f6'; });
   const table = document.getElementById('dfx-table');
   if (table) {
-    const dash = '<span style="color:#9ca3af">—</span>';
+    const dash = '<span style="color:var(--text-subtle)">—</span>';
     const sorted = blocked.slice().sort((a, b) => { const oa = overdueDays(a), ob = overdueDays(b); if (oa !== ob) return ob - oa; return (a.name || '').localeCompare(b.name || ''); });
     const rows = sorted.map(t => {
       const url = clickupTaskUrl(t);
@@ -5474,7 +5474,7 @@ function renderIntegrityBanner(integrity, meta) {
           <li>Open the <strong>Artifacts panel</strong> in the sidebar (the icon usually looks like a stacked-card or paper icon).</li>
           <li>Click the artifact named <code>dashboard-clickup</code>.</li>
         </ol>
-        <p style="margin: 0; color: #1e40af;">It will automatically fetch all tasks from ClickUp and render the dashboard, swimlanes, tree, status breakdown, timeline, and risks.</p>
+        <p style="margin: 0; color: var(--link);">It will automatically fetch all tasks from ClickUp and render the dashboard, swimlanes, tree, status breakdown, timeline, and risks.</p>
       `;
     } else if (e && typeof e.message === 'string' && e.message.startsWith('NO_TOOL_FOUND::')) {
       const dump = e.message.slice('NO_TOOL_FOUND::'.length);
