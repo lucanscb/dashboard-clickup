@@ -536,6 +536,16 @@ a { color: var(--link); }
   -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
 }
 h1, h2, .sec-title, .tagline, .section-head > h3, .dash-head { text-shadow: 0 1px 10px rgba(0,0,0,0.55); }
+/* ---- Encrypt-style hover on tabs (scramble text + light sweep) ---- */
+.tab { position: relative; overflow: hidden; }
+.tab .enc { position: relative; display: inline-block; z-index: 1; }
+.tab .enc-ghost { visibility: hidden; }
+.tab .enc-live { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.tab .enc-sweep { position: absolute; inset: 0; z-index: 0; pointer-events: none; opacity: 0;
+  background: linear-gradient(to bottom, transparent 10%, #818CF8 50%, transparent 51.5%); }
+.tab .enc-sweep.run { opacity: 1; animation: encSweep 2.36s linear; }
+@keyframes encSweep { 0% { transform: translateY(-120%); } 50% { transform: translateY(120%); } 100% { transform: translateY(-120%); } }
+@media (prefers-reduced-motion: reduce) { .tab .enc-sweep.run { animation: none; } }
 </style>
 </head>
 <body>
@@ -5622,6 +5632,51 @@ function renderIntegrityBanner(integrity, meta) {
   document.addEventListener('visibilitychange', function () { document.hidden ? stop() : start(); });
   resize();
   start();  // decorative backdrop — always animates (pauses only when the tab is hidden)
+})();
+</script>
+<script>
+/* Encrypt-style hover for the top tabs (vanilla port of the Originkit button):
+   the label scrambles into junk and decrypts left-to-right while a band of
+   light sweeps behind it. A hidden "ghost" copy reserves the width so the
+   tab bar never twitches while the proportional glyphs shuffle. */
+(function () {
+  var CHARS = "!@#$%^&*():{};|,.<>/?", SPEED = 10, CYCLES = 1;
+  var stepMs = Math.max(16, 1000 / SPEED);
+  document.querySelectorAll('.tab').forEach(function (btn) {
+    var label = (btn.textContent || '').trim();
+    if (!label) return;
+    btn.setAttribute('aria-label', label);
+    btn.textContent = '';
+    var sweep = document.createElement('span'); sweep.className = 'enc-sweep';
+    var wrap = document.createElement('span'); wrap.className = 'enc';
+    var ghost = document.createElement('span'); ghost.className = 'enc-ghost'; ghost.textContent = label;
+    var live = document.createElement('span'); live.className = 'enc-live'; live.textContent = label;
+    wrap.appendChild(ghost); wrap.appendChild(live);
+    btn.appendChild(sweep); btn.appendChild(wrap);
+    var timer = null;
+    function scramble() {
+      var letters = Array.from(label), total = letters.length * CYCLES, step = 0;
+      if (timer) clearInterval(timer);
+      timer = setInterval(function () {
+        live.textContent = letters.map(function (ch, i) {
+          if (step / CYCLES > i) return ch;
+          if (!ch.trim()) return ch;
+          return CHARS[Math.floor(Math.random() * CHARS.length)];
+        }).join('');
+        step++;
+        if (step >= total) { clearInterval(timer); timer = null; live.textContent = label; }
+      }, stepMs);
+    }
+    btn.addEventListener('mouseenter', function () {
+      scramble();
+      sweep.classList.remove('run'); void sweep.offsetWidth; sweep.classList.add('run');
+    });
+    btn.addEventListener('mouseleave', function () {
+      if (timer) { clearInterval(timer); timer = null; }
+      live.textContent = label;
+    });
+    sweep.addEventListener('animationend', function () { sweep.classList.remove('run'); });
+  });
 })();
 </script>
 </body>
