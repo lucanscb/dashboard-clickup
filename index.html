@@ -3787,6 +3787,42 @@ function wrPdfTable(pdf, cols, rows, opts) {
   pdf.y -= 6;
 }
 
+// Overdue panel: the headline number plus an ageing breakdown, so the reader
+// sees not just how much is late but how late it is.
+function wrPdfOverdue(pdf, tasks) {
+  const M = pdf.margin, CW = pdf.W - 2 * M;
+  const od = tasks.filter(t => overdueDays(t) > 0);
+  const total = tasks.length;
+  const share = total ? Math.round(od.length / total * 100) : 0;
+  const buckets = [
+    { l: '1-7 days', n: od.filter(t => overdueDays(t) <= 7).length, c: '#f59e0b' },
+    { l: '8-30 days', n: od.filter(t => { const d = overdueDays(t); return d > 7 && d <= 30; }).length, c: '#ea580c' },
+    { l: 'Over 30 days', n: od.filter(t => overdueDays(t) > 30).length, c: '#e5484d' }
+  ];
+  const H = 58, boxY = pdf.y - 44;
+  const late = od.length > 0;
+  pdf.rect(M, boxY, CW, H, { fill: late ? '#fff5f5' : '#f2fbf6', stroke: late ? '#f2d4d4' : '#cdead9' });
+  pdf.rect(M, boxY, 3, H, { fill: late ? '#e5484d' : '#12a594' });
+
+  pdf.text(M + 15, pdf.y - 6, String(od.length), { size: 21, bold: true, color: late ? '#b42318' : '#0f766e' });
+  pdf.text(M + 15, pdf.y - 21, late ? 'overdue tasks' : 'nothing overdue', { size: 8.5, bold: true, color: WR_INK });
+  pdf.text(M + 15, pdf.y - 33, share + '% of the ' + total + ' task' + (total === 1 ? '' : 's') + ' in this report', { size: 7.5, color: WR_SUB });
+
+  if (late) {
+    const lx = M + 168, barX = lx + 74, barW = CW - (barX - M) - 46;
+    const max = Math.max.apply(null, buckets.map(b => b.n)) || 1;
+    pdf.text(lx, pdf.y - 2, 'HOW LATE', { size: 7, bold: true, color: WR_SUB });
+    buckets.forEach((b, i) => {
+      const y = pdf.y - 15 - i * 12;
+      pdf.text(lx, y, b.l, { size: 7.5, color: WR_INK });
+      pdf.rect(barX, y - 1.5, barW, 7, { fill: '#ffffff' });
+      if (b.n) pdf.rect(barX, y - 1.5, Math.max(2, barW * (b.n / max)), 7, { fill: b.c });
+      pdf.text(barX + barW + 6, y, String(b.n), { size: 7.5, bold: true, color: WR_INK });
+    });
+  }
+  pdf.y -= H + 12;
+}
+
 function wrPdfFooter(pdf, label) {
   const W = pdf.W, M = pdf.margin;
   for (let i = 0; i < pdf.pages.length; i++) {
@@ -3807,20 +3843,7 @@ function wrBuildReportPdf(ctx) {
   wrPdfMsg(pdf, wrMsgFor(cfg));
   wrPdfFilters(pdf, cfg);
 
-  // summary tiles
-  const overdue = tasks.filter(t => overdueDays(t) > 0).length;
-  const done = tasks.filter(t => statusMeta(t.status).group === 'Complete').length;
-  const tiles = [['Tasks', tasks.length, '#0091ff'], ['Overdue', overdue, '#e5484d'], ['Complete', done, '#008844'],
-                 ['Completion', (tasks.length ? Math.round(done / tasks.length * 100) : 0) + '%', '#5f55ee']];
-  const tw = (CW - 3 * 8) / 4;
-  tiles.forEach((t, i) => {
-    const x = M + i * (tw + 8);
-    pdf.rect(x, pdf.y - 34, tw, 42, { fill: '#fbfbfd', stroke: WR_LINE });
-    pdf.rect(x, pdf.y - 34, 3, 42, { fill: t[2] });
-    pdf.text(x + 10, pdf.y - 2, String(t[1]), { size: 15, bold: true, color: WR_INK });
-    pdf.text(x + 10, pdf.y - 20, t[0], { size: 7.5, color: WR_SUB });
-  });
-  pdf.y -= 52;
+  wrPdfOverdue(pdf, tasks);
 
   if (tasks.length) {
     pdf.text(M, pdf.y, 'STATUS DISTRIBUTION', { size: 8, bold: true, color: WR_SUB });
