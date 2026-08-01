@@ -31,8 +31,18 @@ Area, Feature) with direct links to fix them in ClickUp.
 quick theme chips (Blocked, Overdue, In Review, Ready for Approval, …); grouped by
 status with a PDF export.
 
-**Weekly Reports** — build reusable report configurations, a per-assignee report
-center, and a consolidated executive report (KPIs, charts, detailed table).
+**Weekly Reports** — a card-based module that models automated report delivery to
+Slack end to end: a weekly **schedule** (day/time/timezone + the MSG intro message),
+reusable **report configurations** (status, area, assignee app, tags, overdue),
+**Slack channels** and **Slack users** as recipients, each with PDF / preview / test
+actions. Running a delivery opens a console that walks the real pipeline — build the
+PDF, compose the intro, attach it, deliver — with the Slack transport stubbed
+(`SIMULATED`); nothing leaves the browser. Settings persist through `/api/settings`
+when a store is configured, otherwise per-browser.
+
+**General Reports** — executive overview: summary cards, status/priority/area donuts,
+status-, priority- and tag-breakdowns per area, a top-users bar chart, and a sortable
+recent-activity table with date filters, plus its own multi-page **Generate Report PDF**.
 
 **Blocked** — a dedicated board for blocked tasks: distribution by Area and Priority,
 by-area and by-assignee-app breakdowns, and a full list with links.
@@ -74,7 +84,8 @@ custom fields, parent links and statuses are read once, in bulk, and cached in m
 ```
 .
 ├── api/
-│   └── clickup.js      # serverless proxy: GET-only, whitelisted to this list
+│   ├── clickup.js      # serverless proxy: GET-only, whitelisted to this list
+│   └── settings.js     # shared settings store for the Weekly Reports module
 ├── index.html          # the dashboard (bridge + application)
 ├── vercel.json         # HTTP security headers (CSP, X-Frame-Options, …)
 ├── package.json
@@ -89,6 +100,8 @@ custom fields, parent links and statuses are read once, in bulk, and cached in m
 |---|---|
 | `CLICKUP_API_TOKEN` | ClickUp personal API token (`pk_…`). Stored only in Vercel. |
 | `CLICKUP_LIST_ID`   | The ClickUp List ID to read (the number at the end of `/li/<ID>`). |
+| `UPSTASH_REDIS_REST_URL` | _Optional._ Settings store for the Weekly Reports module. |
+| `UPSTASH_REDIS_REST_TOKEN` | _Optional._ Token for the store above. Omit both to keep settings per-browser. |
 
 ## Run locally
 
