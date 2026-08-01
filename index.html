@@ -4583,67 +4583,223 @@ function grRenderActivity() {
   }
 }
 
-// ---- independent executive PDF ------------------------------------------
-function grBuildExecutivePdf() {
-  const cfg = grConfig(), tasks = grTasks();
+// ---- General Reports — Project Progress Report --------------------------
+// An independent layout (it deliberately shares nothing with the weekly report):
+// one clean spread that answers "how is the project doing?". It is fed by exactly
+// the task set behind the Recent Activity table — the saved configuration plus
+// the selected period.
+function grPeriodLabel() {
+  return GR.period === 0 ? 'All time' : 'Last ' + GR.period + ' days';
+}
+
+// A slim, segmented progress bar: the whole pipeline in ClickUp status order.
+function grPipelineBar(pdf, tasks, x, y, w, h) {
+  const total = tasks.length || 1;
+  const counts = STATUS_LIST.map(s => ({
+    label: s.label, color: wrStatusColor(s.name),
+    n: tasks.filter(t => (t.status || '').toLowerCase() === s.name).length
+  })).filter(s => s.n > 0);
+  let cx = x;
+  counts.forEach((s, i) => {
+    const sw = (s.n / total) * w;
+    pdf.rect(cx, y, i === counts.length - 1 ? (x + w - cx) : sw, h, { fill: s.color });
+    cx += sw;
+  });
+  if (!counts.length) pdf.rect(x, y, w, h, { fill: '#e6e8ec' });
+  return counts;
+}
+
+// Wrapping legend of coloured dots.
+function grLegend(pdf, entries, x, y, maxW, total) {
+  let cx = x, cy = y;
+  entries.forEach(e => {
+    const txt = e.label + '  ' + e.n + ' (' + Math.round(e.n / (total || 1) * 100) + '%)';
+    const w = pdf.textWidth(txt, 7.5) + 16;
+    if (cx + w > x + maxW) { cx = x; cy -= 13; }
+    pdf.rect(cx, cy - 1, 7, 7, { fill: e.color });
+    pdf.text(cx + 11, cy, txt, { size: 7.5, color: '#4a5568' });
+    cx += w;
+  });
+  return cy;
+}
+
+// One "label — track — value" progress row.
+function grProgressRow(pdf, label, done, total, x, y, w, color) {
+  const INK = '#1a1d23', SUB = '#6b7280';
+  const p = total ? done / total : 0;
+  const labW = 96, valW = 74, trackX = x + labW, trackW = w - labW - valW;
+  pdf.text(x, y, pdf.fit(label, 8.5, labW - 6), { size: 8.5, bold: true, color: INK });
+  pdf.rect(trackX, y - 2, trackW, 9, { fill: '#eef0f3' });
+  if (p > 0) pdf.rect(trackX, y - 2, Math.max(2, trackW * p), 9, { fill: color });
+  pdf.text(trackX + trackW + 8, y, Math.round(p * 100) + '%', { size: 8.5, bold: true, color: INK });
+  pdf.text(trackX + trackW + 36, y, done + '/' + total, { size: 7.5, color: SUB });
+}
+
+// Break to a new page only when the next block would not fit.
+function grNeed(pdf, h) { if (pdf.y - h < 70) { pdf.addPage(); pdf.y = pdf.H - pdf.margin; return true; } return false; }
+
+function grBuildProgressPdf() {
+  const cfg = grConfig();
+  const tasks = grActivityTasks();
   const pdf = new SimplePDF();
-  const M = pdf.margin, CW = pdf.W - 2 * M;
-  wrPdfHeader(pdf, 'Executive Report — General', 'Configuration: ' + (cfg.name || 'All tasks'));
-  wrPdfMsg(pdf, wrMsgFor(cfg));
-  wrPdfFilters(pdf, cfg);
+  const W = pdf.W, H = pdf.H, M = pdf.margin, CW = W - 2 * M;
+  const INK = '#1a1d23', SUB = '#6b7280', LINE = '#e6e8ec';
+  const isDone = t => statusMeta(t.status).group === 'Complete';
+  const total = tasks.length;
+  const done = tasks.filter(isDone).length;
+  const overdue = tasks.filter(t => overdueDays(t) > 0);
+  const pctDone = total ? Math.round(done / total * 100) : 0;
 
-  const done = tasks.filter(t => statusMeta(t.status).group === 'Complete').length;
-  const overdue = tasks.filter(t => overdueDays(t) > 0).length;
-  const users = new Set(tasks.flatMap(t => cfLabels(t, 'assignee app') || [])).size;
-  const tiles = [['Total', tasks.length, '#0091ff'], ['Complete', done, '#008844'], ['Overdue', overdue, '#e5484d'],
-                 ['Completion', (tasks.length ? Math.round(done / tasks.length * 100) : 0) + '%', '#5f55ee'], ['People', users, '#12a594']];
-  const tw = (CW - 4 * 6) / 5;
-  tiles.forEach((t, i) => {
-    const x = M + i * (tw + 6);
-    pdf.rect(x, pdf.y - 34, tw, 42, { fill: '#fbfbfd', stroke: WR_LINE });
-    pdf.rect(x, pdf.y - 34, 3, 42, { fill: t[2] });
-    pdf.text(x + 9, pdf.y - 2, String(t[1]), { size: 14, bold: true, color: WR_INK });
-    pdf.text(x + 9, pdf.y - 20, t[0], { size: 7, color: WR_SUB });
+  // ---------------- header ----------------
+  pdf.rect(0, H - 104, W, 104, { fill: '#111317' });
+  pdf.text(M, H - 50, 'Project Progress Report', { size: 20, bold: true, color: '#ffffff' });
+  pdf.text(M, H - 68, 'Dashboard - ClickUp   ·   ' + (cfg.name || 'All tasks (no filter)'), { size: 9.5, color: '#c7c8cd' });
+  pdf.text(M, H - 84, grPeriodLabel() + '   ·   ' + total + ' task' + (total === 1 ? '' : 's') + ' in scope', { size: 8, color: '#8a8b91' });
+  const stamp = new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+  pdf.text(W - M - pdf.textWidth(stamp, 8.5), H - 50, stamp, { size: 8.5, color: '#8a8b91' });
+
+  if (!total) {
+    pdf.text(M, H - 160, 'No tasks match this configuration and period.', { size: 11, color: SUB });
+    wrPdfFooter(pdf, 'Dashboard - ClickUp  ·  Project Progress Report');
+    return pdf.build();
+  }
+
+  // ---------------- hero: completion + pipeline ----------------
+  pdf.y = H - 104 - 44;
+  pdf.text(M, pdf.y - 14, String(pctDone) + '%', { size: 44, bold: true, color: '#111317' });
+  pdf.text(M, pdf.y - 30, 'COMPLETE', { size: 8, bold: true, color: SUB });
+  pdf.text(M, pdf.y - 43, done + ' of ' + total + ' tasks done', { size: 8.5, color: SUB });
+
+  const barX = M + 132, barW = CW - 132;
+  pdf.text(barX, pdf.y + 6, 'WHERE THE WORK SITS', { size: 7.5, bold: true, color: SUB });
+  const entries = grPipelineBar(pdf, tasks, barX, pdf.y - 18, barW, 16);
+  grLegend(pdf, entries, barX, pdf.y - 34, barW, total);
+  pdf.y -= 74;
+  pdf.line(M, pdf.y, M + CW, pdf.y, { color: LINE });
+  pdf.y -= 22;
+
+  // ---------------- key figures (dividers, no boxes) ----------------
+  const notStarted = tasks.filter(t => statusMeta(t.status).group === 'Not started').length;
+  const active = total - notStarted - done;
+  const figures = [
+    ['Total', total, INK], ['Not started', notStarted, '#8d8d8d'],
+    ['In flight', active, '#5f55ee'], ['Done', done, '#008844'], ['Overdue', overdue.length, '#e5484d']
+  ];
+  const fw = CW / figures.length;
+  figures.forEach((f, i) => {
+    const x = M + i * fw;
+    if (i) pdf.line(x - 10, pdf.y - 26, x - 10, pdf.y + 12, { color: LINE });
+    pdf.text(x, pdf.y, String(f[1]), { size: 17, bold: true, color: f[2] });
+    pdf.text(x, pdf.y - 15, f[0].toUpperCase(), { size: 7, bold: true, color: SUB });
   });
-  pdf.y -= 54;
+  pdf.y -= 44;
+  pdf.line(M, pdf.y, M + CW, pdf.y, { color: LINE });
+  pdf.y -= 26;
 
-  pdf.text(M, pdf.y, 'STATUS DISTRIBUTION', { size: 8, bold: true, color: WR_SUB }); pdf.y -= 14;
-  wrPdfDonut(pdf, tasks, { r: 58 });
+  // ---------------- momentum: created vs completed, three windows ----------------
+  grNeed(pdf, 70);
+  pdf.text(M, pdf.y, 'MOMENTUM', { size: 8, bold: true, color: SUB });
+  pdf.text(M + 62, pdf.y, 'created vs. completed - a positive net means the backlog grew', { size: 7.5, color: SUB });
+  pdf.y -= 20;
+  const nowMs = Date.now(), dayMs = 86400000;
+  const mw = CW / 3;
+  [7, 30, 90].forEach((dwin, i) => {
+    const from = nowMs - dwin * dayMs;
+    const created = tasks.filter(t => Number(t.date_created || 0) >= from).length;
+    const closed = tasks.filter(t => isDone(t) && Number(t.date_closed || t.due_date || 0) >= from).length;
+    const net = created - closed;
+    const x = M + i * mw;
+    if (i) pdf.line(x - 14, pdf.y - 24, x - 14, pdf.y + 10, { color: LINE });
+    pdf.text(x, pdf.y, 'LAST ' + dwin + ' DAYS', { size: 7, bold: true, color: SUB });
+    const badge = (net > 0 ? '+' : '') + net;
+    const bw = pdf.textWidth(badge, 8) + 12;
+    pdf.rect(x + mw - bw - 26, pdf.y - 3, bw, 13, { fill: net > 0 ? '#fdeceb' : '#eafaf1' });
+    pdf.text(x + mw - bw - 20, pdf.y, badge, { size: 8, bold: true, color: net > 0 ? '#b42318' : '#0f766e' });
+    pdf.text(x, pdf.y - 17, created + ' created', { size: 8.5, color: INK });
+    pdf.text(x, pdf.y - 29, closed + ' completed', { size: 8.5, color: SUB });
+  });
+  pdf.y -= 48;
+  pdf.line(M, pdf.y, M + CW, pdf.y, { color: LINE });
+  pdf.y -= 26;
 
-  // by area table
-  if (pdf.y < 200) { pdf.addPage(); pdf.y = pdf.H - M; }
-  pdf.text(M, pdf.y, 'BREAKDOWN BY AREA', { size: 8, bold: true, color: WR_SUB }); pdf.y -= 16;
+  // ---------------- progress by area ----------------
   const areas = grAreas();
-  const cols = [{ t: 'AREA', x: 0, w: 120 }, { t: 'TASKS', x: 122, w: 60 }, { t: 'COMPLETE', x: 184, w: 70 },
-                { t: 'OVERDUE', x: 256, w: 70 }, { t: 'TOP PRIORITY', x: 328, w: 183 }];
-  wrPdfTable(pdf, cols, areas.map(a => {
+  grNeed(pdf, 90);
+  pdf.text(M, pdf.y, 'PROGRESS BY AREA', { size: 8, bold: true, color: SUB });
+  pdf.y -= 20;
+  const areaRows = areas.map(a => {
     const list = tasks.filter(t => (cfLabels(t, 'area') || []).includes(a));
-    const c = list.filter(t => statusMeta(t.status).group === 'Complete').length;
-    const o = list.filter(t => overdueDays(t) > 0).length;
-    const urgent = list.filter(t => ['urgent', 'high'].includes(priorityOf(t))).length;
-    return [a, String(list.length), c + ' (' + (list.length ? Math.round(c / list.length * 100) : 0) + '%)', String(o), urgent + ' urgent/high'];
-  }));
-
-  // multi-page task listing
-  pdf.addPage(); pdf.y = pdf.H - M;
-  pdf.text(M, pdf.y, 'TASK LISTING', { size: 11, bold: true, color: WR_INK }); pdf.y -= 8;
-  pdf.text(M, pdf.y, tasks.length + ' tasks · ordered by status (ClickUp order), then due date', { size: 8, color: WR_SUB }); pdf.y -= 18;
-  const ordered = tasks.slice().sort((a, b) => {
-    const ia = STATUS_LIST.findIndex(s => s.name === (a.status || '').toLowerCase());
-    const ib = STATUS_LIST.findIndex(s => s.name === (b.status || '').toLowerCase());
-    if (ia !== ib) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
-    return (Number(a.due_date) || 9e15) - (Number(b.due_date) || 9e15);
+    return { a, list };
+  }).filter(r => r.list.length);
+  const noArea = tasks.filter(t => { const l = cfLabels(t, 'area'); return l !== null && !l.length; });
+  if (noArea.length) areaRows.push({ a: 'No Area', list: noArea });
+  areaRows.forEach((r, i) => {
+    grNeed(pdf, 24);
+    grProgressRow(pdf, r.a, r.list.filter(isDone).length, r.list.length, M, pdf.y, CW, WR_PALETTE[i % WR_PALETTE.length]);
+    pdf.y -= 19;
   });
-  const tcols = [{ t: 'TASK', x: 0, w: 230 }, { t: 'STATUS', x: 232, w: 80 }, { t: 'ASSIGNEE APP', x: 314, w: 80 },
-                 { t: 'AREA', x: 396, w: 55 }, { t: 'DUE', x: 453, w: 58 }];
-  wrPdfTable(pdf, tcols, ordered.map(t => {
-    const r = [t.name || '(untitled)', wrStatusLabel(t.status), (cfLabels(t, 'assignee app') || []).join(', ') || '—',
-               (cfLabels(t, 'area') || []).join(', ') || '—',
-               t.due_date ? fmtDate(t.due_date) + (overdueDays(t) > 0 ? ' !' : '') : '—'];
-    r._url = clickupTaskUrl(t);
-    return r;
-  }));
-  wrPdfFooter(pdf, 'Dashboard - ClickUp  ·  Executive Report');
+  if (!areaRows.length) { pdf.text(M, pdf.y, 'Area is not set on these tasks.', { size: 8.5, color: SUB }); pdf.y -= 19; }
+  pdf.y -= 8;
+  pdf.line(M, pdf.y, M + CW, pdf.y, { color: LINE });
+  pdf.y -= 26;
+
+  // ---------------- attention needed ----------------
+  grNeed(pdf, 130);
+  pdf.text(M, pdf.y, 'NEEDS ATTENTION', { size: 8, bold: true, color: SUB });
+  pdf.y -= 18;
+  if (overdue.length) {
+    const ages = [
+      { l: '1-7 days', n: overdue.filter(t => overdueDays(t) <= 7).length, c: '#f59e0b' },
+      { l: '8-30 days', n: overdue.filter(t => { const d = overdueDays(t); return d > 7 && d <= 30; }).length, c: '#ea580c' },
+      { l: 'Over 30 days', n: overdue.filter(t => overdueDays(t) > 30).length, c: '#e5484d' }
+    ];
+    const topY = pdf.y;
+    // left: how late the backlog is
+    pdf.text(M, topY, String(overdue.length), { size: 17, bold: true, color: '#b42318' });
+    pdf.text(M + 6 + pdf.textWidth(String(overdue.length), 17), topY, 'tasks are overdue', { size: 9, color: INK });
+    const mx = Math.max.apply(null, ages.map(a => a.n)) || 1;
+    ages.forEach((a, i) => {
+      const y = topY - 22 - i * 13;
+      pdf.text(M, y, a.l, { size: 7.5, color: SUB });
+      pdf.rect(M + 74, y - 1.5, 128, 7, { fill: '#f1f3f6' });
+      if (a.n) pdf.rect(M + 74, y - 1.5, Math.max(2, 128 * (a.n / mx)), 7, { fill: a.c });
+      pdf.text(M + 210, y, String(a.n), { size: 7.5, bold: true, color: INK });
+    });
+    // right: the oldest offenders, clickable
+    const lx = M + 268;
+    pdf.text(lx, topY, 'OLDEST OVERDUE', { size: 7, bold: true, color: SUB });
+    const oldest = overdue.slice().sort((a, b) => overdueDays(b) - overdueDays(a)).slice(0, 8);
+    oldest.forEach((t, i) => {
+      const y = topY - 16 - i * 12;
+      pdf.text(lx, y, pdf.fit(t.name || '(untitled)', 7.5, 178), { size: 7.5, color: INK });
+      pdf.text(M + 462, y, overdueDays(t) + 'd', { size: 7.5, bold: true, color: '#b42318' });
+      if (clickupTaskUrl(t)) pdf.link(lx, y - 2, 178, 10, clickupTaskUrl(t));
+    });
+    pdf.y = topY - Math.max(22 + ages.length * 13, 16 + oldest.length * 12) - 8;
+  } else {
+    pdf.text(M, pdf.y, 'Nothing is overdue in this period.', { size: 9, color: '#0f766e' });
+    pdf.y -= 12;
+  }
+
+  // ---------------- people ----------------
+  pdf.y -= 18;
+  pdf.line(M, pdf.y, M + CW, pdf.y, { color: LINE });
+  pdf.y -= 26;
+  grNeed(pdf, 150);
+  pdf.text(M, pdf.y, 'WORKLOAD BY ASSIGNEE APP', { size: 8, bold: true, color: SUB });
+  pdf.text(M, pdf.y - 13, 'Each bar shows how much of that person\'s scope is already done.', { size: 8, color: SUB });
+  pdf.y -= 32;
+  const byUser = {};
+  tasks.forEach(t => (cfLabels(t, 'assignee app') || []).forEach(u => { (byUser[u] = byUser[u] || []).push(t); }));
+  const users = Object.keys(byUser).sort((a, b) => byUser[b].length - byUser[a].length).slice(0, 14);
+  users.forEach((u, i) => {
+    grNeed(pdf, 24);
+    grProgressRow(pdf, u, byUser[u].filter(isDone).length, byUser[u].length, M, pdf.y, CW, '#5f55ee');
+    pdf.y -= 19;
+  });
+  if (!users.length) { pdf.text(M, pdf.y, 'Assignee App is not set on these tasks.', { size: 8.5, color: SUB }); pdf.y -= 19; }
+
+  wrPdfFooter(pdf, 'Dashboard - ClickUp  ·  Project Progress Report  ·  ' + (cfg.name || 'All tasks'));
   return pdf.build();
 }
 
@@ -4680,10 +4836,10 @@ async function renderReports(tasks) {
     wrOn('gr-config', 'change', renderGeneralReport);
     wrOn('gr-refresh', 'click', renderGeneralReport);
     wrOn('gr-pdf', 'click', () => {
-      const n = grTasks().length;
-      if (!n) { showToast('No tasks match the selected configuration'); return; }
-      wrDownloadPdf(grBuildExecutivePdf(), 'dashboard-clickup-executive-report-' + slug(grConfig().name || 'all-tasks') + '.pdf');
-      showToast('Executive PDF generated (' + n + ' tasks)');
+      const n = grActivityTasks().length;
+      if (!n) { showToast('No tasks match this configuration and period'); return; }
+      wrDownloadPdf(grBuildProgressPdf(), 'dashboard-clickup-progress-report-' + slug(grConfig().name || 'all-tasks') + '.pdf');
+      showToast('Progress report generated (' + n + ' tasks)');
     });
     const seg = document.getElementById('gr-period');
     if (seg) seg.addEventListener('click', e => {
