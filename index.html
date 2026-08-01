@@ -723,8 +723,6 @@ textarea.wr-input { resize:vertical; }
       </div>
       <p class="muted" style="margin:2px 0 12px">Consolidated executive overview across everyone — same saved filters, one report for leadership. <span id="gr-meta"></span></p>
 
-      <div class="kpi-row" id="gr-kpis"></div>
-
       <div class="card">
         <div class="wr-listhead">
           <h3 style="margin:0">Recent activity</h3>
@@ -4503,28 +4501,9 @@ function grAreas() { return ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) 
 
 function renderGeneralReport() {
   const cfg = grConfig();
-  const tasks = grTasks();
-  const total = tasks.length;
-  const overdue = tasks.filter(t => overdueDays(t) > 0).length;
-  const done = tasks.filter(t => statusMeta(t.status).group === 'Complete').length;
-  const blocked = tasks.filter(t => (t.status || '').toLowerCase().includes('blocked')).length;
-
+  const total = grTasks().length;
   const meta = document.getElementById('gr-meta');
   if (meta) meta.textContent = total + ' task' + (total === 1 ? '' : 's') + ' · ' + (cfg.name || 'All tasks');
-
-  // ---- summary cards ----
-  const tiles = [
-    ['Total tasks', total, cfg.name || 'All tasks', '#0091ff'],
-    ['Complete', done, total ? Math.round(done / total * 100) + '% completion' : '', '#008844'],
-    ['Overdue', overdue, total ? Math.round(overdue / total * 100) + '% of scope' : '', '#e5484d'],
-    ['Blocked', blocked, 'status = Blocked', '#f59e0b'],
-    ['Assignee Apps', new Set(tasks.flatMap(t => cfLabels(t, 'assignee app') || [])).size, 'people involved', '#5f55ee']
-  ];
-  const kpi = document.getElementById('gr-kpis');
-  if (kpi) kpi.innerHTML = tiles.map(t => `<div class="kpi" style="border-left:4px solid ${t[3]}">
-    <div class="lab">${escapeHtml(t[0])}</div><div class="val">${escapeHtml(String(t[1]))}</div>
-    ${t[2] ? `<div class="sub">${escapeHtml(t[2])}</div>` : ''}</div>`).join('');
-
   grRenderActivity();
 }
 
