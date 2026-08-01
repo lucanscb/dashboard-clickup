@@ -3572,7 +3572,12 @@ function wrTaskTags(t) { return (t.tags || []).map(x => (x.name || '').trim()).f
 // Does a task belong in this configuration's report?
 function wrMatches(task, cfg) {
   if (!cfg) return true;
-  if (cfg.statuses && cfg.statuses.length && !cfg.statuses.includes(task.status)) return false;
+  // Statuses are stored as ClickUp's display labels ("To Do") while a task carries
+  // the raw status string ("to do"), so the comparison must be case-insensitive.
+  if (cfg.statuses && cfg.statuses.length) {
+    const st = (task.status || '').toLowerCase();
+    if (!cfg.statuses.some(s => String(s).toLowerCase() === st)) return false;
+  }
   if (cfg.lanes && cfg.lanes.length) {
     const al = cfLabels(task, 'area');
     if (!(al && cfg.lanes.some(l => al.includes(l)))) return false;
