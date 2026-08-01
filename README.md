@@ -100,8 +100,8 @@ custom fields, parent links and statuses are read once, in bulk, and cached in m
 |---|---|
 | `CLICKUP_API_TOKEN` | ClickUp personal API token (`pk_…`). Stored only in Vercel. |
 | `CLICKUP_LIST_ID`   | The ClickUp List ID to read (the number at the end of `/li/<ID>`). |
-| `UPSTASH_REDIS_REST_URL` | _Optional._ Settings store for the Weekly Reports module. |
-| `UPSTASH_REDIS_REST_TOKEN` | _Optional._ Token for the store above. Omit both to keep settings per-browser. |
+| `UPSTASH_REDIS_REST_URL` | _Optional._ Settings store for the Weekly Reports module. `KV_REST_API_URL` (injected by the Vercel Marketplace integration) is accepted too. |
+| `UPSTASH_REDIS_REST_TOKEN` | _Optional._ Token for the store above (or `KV_REST_API_TOKEN`). Omit to keep settings per-browser. |
 
 ## Run locally
 

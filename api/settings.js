@@ -14,9 +14,12 @@
 const NAMESPACES = ['weekly-reports'];
 const MAX_BYTES = 256 * 1024;
 
+// Accept both naming schemes: the Vercel Marketplace integration injects
+// KV_REST_API_*, while a database created directly on Upstash exposes
+// UPSTASH_REDIS_REST_*. Either one is enough.
 function redisEnv() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
   return url && token ? { url, token } : null;
 }
 
