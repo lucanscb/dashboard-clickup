@@ -725,19 +725,6 @@ textarea.wr-input { resize:vertical; }
 
       <div class="kpi-row" id="gr-kpis"></div>
 
-      <div class="gr-donuts">
-        <div class="card"><h3>Status distribution</h3><div class="chart-wrap" style="height:270px"><canvas id="gr-donut-status"></canvas></div></div>
-        <div class="card"><h3>Priority distribution</h3><div class="chart-wrap" style="height:270px"><canvas id="gr-donut-priority"></canvas></div></div>
-        <div class="card"><h3>Area distribution</h3><div class="chart-wrap" style="height:270px"><canvas id="gr-donut-area"></canvas></div></div>
-      </div>
-
-      <div class="card"><h3>Status breakdown by Area</h3><div class="chart-wrap" style="height:260px"><canvas id="gr-stack-status"></canvas></div></div>
-      <div class="card-row">
-        <div class="card"><h3>Priority breakdown by Area</h3><div class="chart-wrap" style="height:250px"><canvas id="gr-stack-priority"></canvas></div></div>
-        <div class="card"><h3>Tag breakdown by Area</h3><div class="chart-wrap" style="height:250px"><canvas id="gr-stack-tag"></canvas></div></div>
-      </div>
-      <div class="card"><h3>Top users by task load</h3><div class="chart-wrap" style="height:260px"><canvas id="gr-bar-users"></canvas></div></div>
-
       <div class="card">
         <div class="wr-listhead">
           <h3 style="margin:0">Recent activity</h3>
@@ -815,8 +802,7 @@ textarea.wr-input { resize:vertical; }
                 <label class="check-pill" style="width:fit-content"><input type="checkbox" id="wr-cfg-overdue"> Overdue tasks only</label></div>
               <div class="wr-field"><label>Specific statuses <span class="wr-opt">(empty = all)</span></label><div id="wr-cfg-status"></div></div>
               <div class="wr-field"><label>Users to include <span class="wr-opt">(empty = everyone)</span></label><div id="wr-cfg-user"></div></div>
-              <div class="wr-field"><label>Areas <span class="wr-opt">(optional)</span></label><div id="wr-cfg-lane"></div></div>
-              <div class="wr-field"><label>Tags <span class="wr-opt">(optional)</span></label><div id="wr-cfg-tag"></div></div>
+              <div class="wr-field"><label>Area <span class="wr-opt">(optional)</span></label><div id="wr-cfg-lane"></div></div>
             </div>
             <div class="wr-cfg-prev" id="wr-cfg-preview"></div>
             <div class="wr-form-actions">
@@ -3585,12 +3571,6 @@ function wrDefaultConfig() {
 function wrConfigById(id) { return WR.configs.find(c => c.id === id) || null; }
 
 function wrTaskTags(t) { return (t.tags || []).map(x => (x.name || '').trim()).filter(Boolean); }
-function wrAllTags(tasks) {
-  const s = new Set();
-  for (const t of (tasks || [])) for (const n of wrTaskTags(t)) s.add(n);
-  return [...s].sort((a, b) => a.localeCompare(b));
-}
-
 // Does a task belong in this configuration's report?
 function wrMatches(task, cfg) {
   if (!cfg) return true;
@@ -4174,11 +4154,9 @@ function wrLoadConfigForm(cfg) {
   set('wr-cfg-desc', d.description);
   set('wr-cfg-msg', d.msg);
   const ov = document.getElementById('wr-cfg-overdue'); if (ov) ov.checked = !!d.overdueOnly;
-  const tasks = REPORT.tasks || [];
   wrSelect('wr-cfg-status', STATUS_LIST.map(s => ({ v: s.label, l: s.label, c: wrStatusColor(s.name) })), d.statuses, v => { d.statuses = v; wrCfgPreview(); }, 'All statuses');
-  wrSelect('wr-cfg-lane', ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) || []).map(o => o.label), d.lanes, v => { d.lanes = v; wrCfgPreview(); }, 'All areas');
+  wrSelect('wr-cfg-lane', ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) || []).map(o => o.label), d.lanes, v => { d.lanes = v; wrCfgPreview(); }, 'All area');
   wrSelect('wr-cfg-user', wrAllUsers(), d.users, v => { d.users = v; wrCfgPreview(); }, 'Everyone');
-  wrSelect('wr-cfg-tag', wrAllTags(tasks), d.tags, v => { d.tags = v; wrCfgPreview(); }, 'All tags');
   const t = document.getElementById('wr-cfg-form-title');
   if (t) t.textContent = cfg ? 'Edit report configuration' : 'Create a report configuration';
   wrCfgPreview();
@@ -4513,65 +4491,13 @@ function wrRunDelivery(recipients, mode) {
 // ====================================================================
 //  General Reports — executive overview
 // ====================================================================
-const GR = { period: 0, sortKey: 'due', sortDir: 1, charts: {} };
+const GR = { period: 0, sortKey: 'due', sortDir: 1 };
 
 function grConfig() {
   const sel = document.getElementById('gr-config');
   return wrConfigById(sel ? sel.value : '') || wrDefaultConfig();
 }
 function grTasks() { return wrTasksFor(grConfig()); }
-
-function grDestroy(id) { const c = GR.charts[id]; if (c) { c.destroy(); delete GR.charts[id]; } }
-
-// Doughnut with values drawn inside the slices (sliceLabelPlugin handles that).
-function grDonut(canvasId, entries) {
-  const el = document.getElementById(canvasId); if (!el) return;
-  grDestroy(canvasId);
-  const data = entries.filter(e => e.value > 0);
-  GR.charts[canvasId] = new Chart(el, {
-    type: 'doughnut',
-    data: {
-      labels: data.length ? data.map(e => e.label) : ['No data'],
-      datasets: [{ data: data.length ? data.map(e => e.value) : [1], backgroundColor: data.length ? data.map(e => e.color) : ['#3a3b40'], borderWidth: 0 }]
-    },
-    options: {
-      responsive: true, maintainAspectRatio: false, cutout: '58%',
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } }
-    }
-  });
-}
-
-// Horizontal stacked bars: one row per Area, split by a dimension.
-function grStacked(canvasId, rows, series) {
-  const el = document.getElementById(canvasId); if (!el) return;
-  grDestroy(canvasId);
-  GR.charts[canvasId] = new Chart(el, {
-    type: 'bar',
-    data: {
-      labels: rows,
-      datasets: series.map(s => ({ label: s.label, data: s.data, backgroundColor: s.color, borderRadius: 3, borderSkipped: false }))
-    },
-    options: {
-      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
-      scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true, grid: { display: false } } }
-    }
-  });
-}
-
-function grBar(canvasId, labels, values, color) {
-  const el = document.getElementById(canvasId); if (!el) return;
-  grDestroy(canvasId);
-  GR.charts[canvasId] = new Chart(el, {
-    type: 'bar',
-    data: { labels, datasets: [{ label: 'Tasks', data: values, backgroundColor: color, borderRadius: 4, borderSkipped: false, maxBarThickness: 38 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { x: { grid: { display: false } }, y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-  });
-}
 
 function grAreas() { return ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) || []).map(o => o.label); }
 
@@ -4598,44 +4524,6 @@ function renderGeneralReport() {
   if (kpi) kpi.innerHTML = tiles.map(t => `<div class="kpi" style="border-left:4px solid ${t[3]}">
     <div class="lab">${escapeHtml(t[0])}</div><div class="val">${escapeHtml(String(t[1]))}</div>
     ${t[2] ? `<div class="sub">${escapeHtml(t[2])}</div>` : ''}</div>`).join('');
-
-  // ---- executive donuts ----
-  const stCount = {};
-  tasks.forEach(t => { const k = t.status || '(none)'; stCount[k] = (stCount[k] || 0) + 1; });
-  grDonut('gr-donut-status', STATUS_LIST.map(s => ({ label: s.label, value: stCount[s.label] || Object.keys(stCount).filter(k => k.toLowerCase() === s.name).reduce((a, k) => a + stCount[k], 0), color: wrStatusColor(s.name) })));
-
-  const prios = ['urgent', 'high', 'normal', 'low', 'none'];
-  grDonut('gr-donut-priority', prios.map(p => ({
-    label: p === 'none' ? 'No priority' : p[0].toUpperCase() + p.slice(1),
-    value: tasks.filter(t => priorityOf(t) === p).length, color: WR_PRIORITY_COLORS[p]
-  })));
-
-  const areas = grAreas();
-  grDonut('gr-donut-area', areas.map((a, i) => ({
-    label: a, value: tasks.filter(t => (cfLabels(t, 'area') || []).includes(a)).length, color: WR_PALETTE[i % WR_PALETTE.length]
-  })).concat([{ label: 'No Area', value: tasks.filter(t => { const l = cfLabels(t, 'area'); return l !== null && !l.length; }).length, color: '#4b5563' }]));
-
-  // ---- breakdowns by Area ----
-  const inArea = (t, a) => (cfLabels(t, 'area') || []).includes(a);
-  grStacked('gr-stack-status', areas, STATUS_LIST.map(s => ({
-    label: s.label, color: wrStatusColor(s.name),
-    data: areas.map(a => tasks.filter(t => inArea(t, a) && (t.status || '').toLowerCase() === s.name).length)
-  })));
-  grStacked('gr-stack-priority', areas, prios.map(p => ({
-    label: p === 'none' ? 'No priority' : p[0].toUpperCase() + p.slice(1), color: WR_PRIORITY_COLORS[p],
-    data: areas.map(a => tasks.filter(t => inArea(t, a) && priorityOf(t) === p).length)
-  })));
-  const topTags = wrAllTags(tasks).slice(0, 8);
-  grStacked('gr-stack-tag', areas, topTags.length ? topTags.map((g, i) => ({
-    label: '#' + g, color: WR_PALETTE[i % WR_PALETTE.length],
-    data: areas.map(a => tasks.filter(t => inArea(t, a) && wrTaskTags(t).includes(g)).length)
-  })) : [{ label: 'No tags', color: '#3a3b40', data: areas.map(() => 0) }]);
-
-  // ---- top users bar chart ----
-  const uc = {};
-  tasks.forEach(t => (cfLabels(t, 'assignee app') || []).forEach(u => { uc[u] = (uc[u] || 0) + 1; }));
-  const top = Object.entries(uc).sort((a, b) => b[1] - a[1]).slice(0, 12);
-  grBar('gr-bar-users', top.map(x => x[0]), top.map(x => x[1]), '#5f55ee');
 
   grRenderActivity();
 }
