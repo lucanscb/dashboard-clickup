@@ -581,12 +581,19 @@ textarea.wr-input { resize:vertical; }
 .wr-inline-select { padding:6px 10px; border:1px solid var(--border-strong); border-radius:9px; font:inherit; font-size:12px; background:var(--surface-2); color:var(--text); }
 .wr-note { background:rgba(95,85,238,0.12); border:1px solid rgba(95,85,238,0.35); border-radius:10px; padding:10px 12px; font-size:12px; margin-bottom:14px; line-height:1.5; }
 .wr-note code { background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:4px; }
-/* pills */
-.wr-pills { display:flex; flex-wrap:wrap; gap:6px; max-height:150px; overflow-y:auto; padding:2px; }
-.wr-pill { display:inline-flex; align-items:center; gap:5px; padding:5px 10px; border-radius:999px; border:1px solid var(--border-strong);
-  background:var(--surface-2); color:var(--text-muted); font:inherit; font-size:11.5px; cursor:pointer; white-space:nowrap; transition:all .12s; }
-.wr-pill:hover { border-color:var(--text-subtle); color:var(--text); }
-.wr-pill.on { background:rgba(255,255,255,0.14); color:var(--text); border-color:var(--text-subtle); font-weight:600; }
+/* clean configuration form */
+.wr-form-h { margin:0 0 16px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--link); }
+.wr-field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+.wr-field > label { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+.wr-opt { font-weight:400; text-transform:none; letter-spacing:0; color:var(--text-subtle); }
+.wr-label-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.wr-auto { font-size:10px; font-weight:700; border:1px solid rgba(95,85,238,.5); color:#a5b4fc; background:rgba(95,85,238,.16);
+  border-radius:999px; padding:2px 9px; white-space:nowrap; }
+.wr-auto.off { border-color:var(--border); color:var(--text-subtle); background:transparent; }
+.wr-hint { font-size:10.5px; color:var(--text-subtle); }
+.wr-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 16px; }
+@media (max-width:620px){ .wr-grid2 { grid-template-columns:1fr; } }
+.wr-form-actions { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; padding-top:14px; border-top:1px solid var(--border); }
 .wr-dot { width:8px; height:8px; border-radius:2px; display:inline-block; }
 .wr-chips { display:flex; flex-wrap:wrap; gap:5px; }
 .wr-chip { display:inline-block; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:999px; border:1px solid; white-space:nowrap; }
@@ -793,21 +800,30 @@ textarea.wr-input { resize:vertical; }
         </div>
         <div class="wr-dialog-body wr-split">
           <div class="wr-split-l">
-            <div class="section-head"><h3 id="wr-cfg-form-title">New configuration</h3><button class="btn sm" id="wr-cfg-new">+ New</button></div>
-            <div class="rep-field"><label for="wr-cfg-name">Configuration name</label>
-              <input type="text" id="wr-cfg-name" class="wr-input" placeholder="Auto-generated from your filters…"></div>
-            <div class="rep-field" style="margin-top:10px"><label for="wr-cfg-desc">Description</label>
-              <input type="text" id="wr-cfg-desc" class="wr-input" placeholder="What is this report for?"></div>
-            <div class="rep-field" style="margin-top:10px"><label for="wr-cfg-msg">Report message (MSG)</label>
+            <h4 class="wr-form-h" id="wr-cfg-form-title">Create a report configuration</h4>
+            <div class="wr-field">
+              <div class="wr-label-row"><label for="wr-cfg-name">Configuration name</label><span class="wr-auto" id="wr-cfg-auto">✓ Auto</span></div>
+              <input type="text" id="wr-cfg-name" class="wr-input" placeholder="Auto-generated from your filters…">
+              <div class="wr-hint">Generated automatically from your filters. Type to set a custom name.</div>
+            </div>
+            <div class="wr-field"><label for="wr-cfg-desc">Description <span class="wr-opt">(optional)</span></label>
+              <input type="text" id="wr-cfg-desc" class="wr-input" placeholder="What is this configuration for?"></div>
+            <div class="wr-field"><label for="wr-cfg-msg">Report message (MSG) <span class="wr-opt">(optional)</span></label>
               <textarea id="wr-cfg-msg" class="wr-input" rows="2" placeholder="Leave empty to use the default message from card 1…"></textarea></div>
-            <div class="rep-field" style="margin-top:12px"><label>Statuses <span class="muted">(primary filter · empty = all)</span></label><div class="wr-pills" id="wr-cfg-status"></div></div>
-            <div class="rep-field" style="margin-top:10px"><label>Area</label><div class="wr-pills" id="wr-cfg-lane"></div></div>
-            <div class="rep-field" style="margin-top:10px"><label>Assignee App <span class="muted">(empty = everyone)</span></label><div class="wr-pills" id="wr-cfg-user"></div></div>
-            <div class="rep-field" style="margin-top:10px"><label>Tags</label><div class="wr-pills" id="wr-cfg-tag"></div></div>
-            <div class="rep-field" style="margin-top:10px"><label>Only overdue?</label>
-              <label class="check-pill" style="width:fit-content"><input type="checkbox" id="wr-cfg-overdue"> Overdue tasks only</label></div>
+            <div class="wr-grid2">
+              <div class="wr-field"><label>Only overdue?</label>
+                <label class="check-pill" style="width:fit-content"><input type="checkbox" id="wr-cfg-overdue"> Overdue tasks only</label></div>
+              <div class="wr-field"><label>Specific statuses <span class="wr-opt">(empty = all)</span></label><div id="wr-cfg-status"></div></div>
+              <div class="wr-field"><label>Users to include <span class="wr-opt">(empty = everyone)</span></label><div id="wr-cfg-user"></div></div>
+              <div class="wr-field"><label>Areas <span class="wr-opt">(optional)</span></label><div id="wr-cfg-lane"></div></div>
+              <div class="wr-field"><label>Tags <span class="wr-opt">(optional)</span></label><div id="wr-cfg-tag"></div></div>
+            </div>
             <div class="wr-cfg-prev" id="wr-cfg-preview"></div>
-            <div class="rep-actions"><button class="btn primary" id="wr-cfg-save">Save configuration</button></div>
+            <div class="wr-form-actions">
+              <button class="btn primary" id="wr-cfg-save">Save configuration</button>
+              <button class="btn" id="wr-cfg-new">+ New</button>
+              <button class="btn" id="wr-cfg-clear">Clear form</button>
+            </div>
           </div>
           <div class="wr-split-r">
             <div class="section-head"><h3>Saved configurations <span class="muted" id="wr-cfg-count" style="font-weight:400"></span></h3></div>
@@ -4075,27 +4091,72 @@ function wrSaveSchedule() {
 // ====================================================================
 let WR_EDITING = null;   // config id being edited, '' = new
 
-// A lightweight multi-select rendered as toggle pills.
-function wrPillGroup(hostId, options, selected, onChange, opts) {
+// Compact multi-select dropdown, styled with the dashboard's own .ms-* shell.
+// Self-contained (no shared FILTER_STATE): the caller owns the value.
+function wrSelect(hostId, options, selected, onChange, placeholder) {
   const host = document.getElementById(hostId); if (!host) return;
-  opts = opts || {};
   const sel = new Set(selected || []);
-  if (!options.length) { host.innerHTML = '<span class="muted" style="font-size:11px">' + (opts.empty || 'Nothing available yet.') + '</span>'; return; }
-  host.innerHTML = options.map(o => {
-    const v = typeof o === 'string' ? o : o.v;
-    const l = typeof o === 'string' ? o : o.l;
-    const c = (typeof o === 'object' && o.c) ? o.c : null;
-    return `<button type="button" class="wr-pill ${sel.has(v) ? 'on' : ''}" data-v="${escapeHtml(v)}"
-      ${c ? `style="--pc:${c}"` : ''}>${c ? `<i class="wr-dot" style="background:${c}"></i>` : ''}${escapeHtml(l)}</button>`;
-  }).join('');
-  if (host._h) host.removeEventListener('click', host._h);
-  host._h = e => {
-    const b = e.target.closest('.wr-pill'); if (!b) return;
-    const v = b.dataset.v;
-    if (sel.has(v)) { sel.delete(v); b.classList.remove('on'); } else { sel.add(v); b.classList.add('on'); }
-    onChange([...sel]);
-  };
-  host.addEventListener('click', host._h);
+  const opts = options.map(o => (typeof o === 'string' ? { v: o, l: o, c: null } : o));
+  host.innerHTML = `
+    <div class="multi-select">
+      <button class="ms-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+        <span class="ms-value placeholder"></span><span class="ms-arrow">&#9662;</span>
+      </button>
+      <div class="ms-dropdown" hidden>
+        ${opts.length > 7 ? '<input class="ms-search" placeholder="Search\u2026" />' : ''}
+        <div class="ms-bulk"><button type="button" class="ms-all">Select all</button><button type="button" class="ms-clear">Clear</button></div>
+        <div class="ms-options">
+          ${opts.map(o => `<label class="ms-option"><input type="checkbox" value="${escapeHtml(o.v)}" ${sel.has(o.v) ? 'checked' : ''}/>
+            ${o.c ? `<i class="wr-dot" style="background:${o.c}"></i>` : ''}<span>${escapeHtml(o.l)}</span></label>`).join('')}
+          ${opts.length ? '' : '<div class="ms-empty">No options available</div>'}
+        </div>
+      </div>
+    </div>`;
+  const ms = host.querySelector('.multi-select');
+  const trigger = ms.querySelector('.ms-trigger');
+  const dd = ms.querySelector('.ms-dropdown');
+  const valueEl = ms.querySelector('.ms-value');
+  const search = ms.querySelector('.ms-search');
+
+  function label() {
+    let badge = trigger.querySelector('.ms-count');
+    if (!sel.size) {
+      valueEl.classList.add('placeholder');
+      valueEl.textContent = placeholder || 'All';
+      if (badge) badge.remove();
+    } else {
+      valueEl.classList.remove('placeholder');
+      valueEl.textContent = sel.size === 1 ? [...sel][0] : sel.size + ' selected';
+      if (!badge) { badge = document.createElement('span'); badge.className = 'ms-count'; trigger.insertBefore(badge, trigger.querySelector('.ms-arrow')); }
+      badge.textContent = String(sel.size);
+    }
+  }
+  label();
+  trigger.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = !dd.hidden;
+    document.querySelectorAll('.ms-dropdown').forEach(d => { if (d !== dd) { d.hidden = true; const t = d.parentElement.querySelector('.ms-trigger'); if (t) t.classList.remove('open'); } });
+    dd.hidden = open; trigger.classList.toggle('open', !open);
+    if (!open && search) search.focus();
+  });
+  dd.addEventListener('click', e => e.stopPropagation());
+  ms.addEventListener('change', e => {
+    const cb = e.target.closest('input[type="checkbox"]'); if (!cb) return;
+    if (cb.checked) sel.add(cb.value); else sel.delete(cb.value);
+    label(); onChange([...sel]);
+  });
+  ms.querySelector('.ms-all').addEventListener('click', () => {
+    ms.querySelectorAll('.ms-option:not(.hidden) input').forEach(cb => { cb.checked = true; sel.add(cb.value); });
+    label(); onChange([...sel]);
+  });
+  ms.querySelector('.ms-clear').addEventListener('click', () => {
+    ms.querySelectorAll('input').forEach(cb => { cb.checked = false; }); sel.clear();
+    label(); onChange([...sel]);
+  });
+  if (search) search.addEventListener('input', () => {
+    const q = search.value.toLowerCase().trim();
+    ms.querySelectorAll('.ms-option').forEach(o => o.classList.toggle('hidden', !!q && !o.textContent.toLowerCase().includes(q)));
+  });
 }
 
 function wrEditingConfig() {
@@ -4114,12 +4175,12 @@ function wrLoadConfigForm(cfg) {
   set('wr-cfg-msg', d.msg);
   const ov = document.getElementById('wr-cfg-overdue'); if (ov) ov.checked = !!d.overdueOnly;
   const tasks = REPORT.tasks || [];
-  wrPillGroup('wr-cfg-status', STATUS_LIST.map(s => ({ v: s.label, l: s.label, c: wrStatusColor(s.name) })), d.statuses, v => { d.statuses = v; wrCfgPreview(); });
-  wrPillGroup('wr-cfg-lane', ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) || []).map(o => o.label), d.lanes, v => { d.lanes = v; wrCfgPreview(); }, { empty: 'Area field still loading…' });
-  wrPillGroup('wr-cfg-user', wrAllUsers(), d.users, v => { d.users = v; wrCfgPreview(); }, { empty: 'Assignee App still loading…' });
-  wrPillGroup('wr-cfg-tag', wrAllTags(tasks), d.tags, v => { d.tags = v; wrCfgPreview(); }, { empty: 'No tags found on these tasks.' });
+  wrSelect('wr-cfg-status', STATUS_LIST.map(s => ({ v: s.label, l: s.label, c: wrStatusColor(s.name) })), d.statuses, v => { d.statuses = v; wrCfgPreview(); }, 'All statuses');
+  wrSelect('wr-cfg-lane', ((FIELD_DEFS['area'] && FIELD_DEFS['area'].options) || []).map(o => o.label), d.lanes, v => { d.lanes = v; wrCfgPreview(); }, 'All areas');
+  wrSelect('wr-cfg-user', wrAllUsers(), d.users, v => { d.users = v; wrCfgPreview(); }, 'Everyone');
+  wrSelect('wr-cfg-tag', wrAllTags(tasks), d.tags, v => { d.tags = v; wrCfgPreview(); }, 'All tags');
   const t = document.getElementById('wr-cfg-form-title');
-  if (t) t.textContent = cfg ? 'Edit configuration' : 'New configuration';
+  if (t) t.textContent = cfg ? 'Edit report configuration' : 'Create a report configuration';
   wrCfgPreview();
 }
 
@@ -4139,8 +4200,12 @@ function wrCfgPreview() {
   const n = wrTasksFor(d).length;
   const el = document.getElementById('wr-cfg-preview');
   if (el) el.innerHTML = `<strong>${n}</strong> task${n === 1 ? '' : 's'} match right now &nbsp;·&nbsp; ${wrChipsHtml(d)}`;
+  // The name is auto-generated until the user types their own.
   const nameEl = document.getElementById('wr-cfg-name');
-  if (nameEl && !nameEl.value) nameEl.placeholder = wrAutoName(d);
+  const badge = document.getElementById('wr-cfg-auto');
+  const custom = !!(nameEl && nameEl.value.trim());
+  if (nameEl && !custom) nameEl.placeholder = wrAutoName(d);
+  if (badge) { badge.classList.toggle('off', custom); badge.textContent = custom ? 'Custom' : '\u2713 Auto'; }
 }
 
 function wrSaveConfig() {
@@ -4706,6 +4771,7 @@ async function renderReports(tasks) {
     // Card 2
     wrOn('wr-cfg-save', 'click', wrSaveConfig);
     wrOn('wr-cfg-new', 'click', () => { wrLoadConfigForm(null); wrRenderConfigs(); });
+    wrOn('wr-cfg-clear', 'click', () => { wrLoadConfigForm(null); wrRenderConfigs(); showToast('Form cleared'); });
     ['wr-cfg-name', 'wr-cfg-desc', 'wr-cfg-msg'].forEach(id => wrOn(id, 'input', wrCfgPreview));
     wrOn('wr-cfg-overdue', 'change', wrCfgPreview);
     // Card 3
