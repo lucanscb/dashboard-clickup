@@ -45,10 +45,20 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .panel.active { display: block; }
 
 .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
-.kpi .lab { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; }
-.kpi .val { font-size: 22px; font-weight: 600; margin-top: 4px; letter-spacing: -0.02em; }
-.kpi .sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.kpi { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 16px 14px; box-shadow: var(--shadow-sm); overflow: hidden; transition: transform .12s, border-color .12s; }
+/* colour signature across the top edge */
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--k, var(--border-strong)); }
+.kpi:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.kpi .kpi-ico { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px; color: var(--k, var(--text-muted)); background: color-mix(in srgb, var(--k, #888) 18%, transparent); }
+.kpi .kpi-ico svg { width: 18px; height: 18px; }
+/* the completion card swaps the tinted chip for a progress ring */
+.kpi .kpi-ico.ring { background: transparent; }
+.kpi .kpi-ico.ring svg { width: 34px; height: 34px; }
+.kpi .lab { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+.kpi .val { font-size: 26px; font-weight: 700; margin-top: 3px; letter-spacing: -0.03em; line-height: 1.15; }
+.kpi .sub { font-size: 11px; color: var(--text-subtle); margin-top: 3px; }
 
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
 .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -1419,17 +1429,47 @@ function escapeHtml(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
+// Inline icon set for the KPI cards (stroke icons, no external dependency).
+const KPI_ICONS = {
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+  spark: '<path d="M12 3v3M12 18v3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M3 12h3M18 12h3M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>',
+  inbox: '<path d="M3 12h5l2 3h4l2-3h5"/><path d="M5 5h14l2 7v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5z"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
+  flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V4s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 2.5-3 4"/><path d="M12 17h.01"/>'
+};
+function kpiIcon(name) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${KPI_ICONS[name] || ''}</svg>`;
+}
+// Small SVG progress ring used by the completion card.
+function kpiRing(pct) {
+  const r = 13, c = 2 * Math.PI * r;
+  return `<svg class="kpi-ring" viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="${r}" fill="none" stroke="currentColor" stroke-width="3.4" opacity="0.18"/>
+    <circle cx="16" cy="16" r="${r}" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - (pct || 0) / 100)).toFixed(1)}"
+      transform="rotate(-90 16 16)"/>
+  </svg>`;
+}
+
 function renderKpis(stats) {
   const el = document.getElementById('kpis');
   const total = stats.total;
-  el.innerHTML = `
-    <div class="kpi"><div class="lab">Total tasks</div><div class="val num" id="kpi-total">${total}</div><div class="sub">Including subtasks</div></div>
-    <div class="kpi"><div class="lab">Not started</div><div class="val num" id="kpi-notstarted">&hellip;</div><div class="sub">Open-type statuses</div></div>
-    <div class="kpi"><div class="lab">Active</div><div class="val num" id="kpi-active">&hellip;</div><div class="sub">In-flight work</div></div>
-    <div class="kpi"><div class="lab">Done</div><div class="val num" id="kpi-done">&hellip;</div><div class="sub">Done-type statuses</div></div>
-    <div class="kpi"><div class="lab">Complete</div><div class="val num" id="kpi-complete">&hellip;</div><div class="sub">Closed-type statuses</div></div>
-    <div class="kpi"><div class="lab">Uncategorized</div><div class="val num" id="kpi-uncat">&hellip;</div><div class="sub" id="kpi-uncat-sub">reading Area field&hellip;</div></div>
-  `;
+  const card = (color, icon, lab, valId, val, sub, subId) => `
+    <div class="kpi" style="--k:${color}">
+      <span class="kpi-ico${icon.indexOf('kpi-ring') >= 0 ? ' ring' : ''}">${icon}</span>
+      <div class="lab">${lab}</div>
+      <div class="val num" id="${valId}">${val}</div>
+      <div class="sub"${subId ? ` id="${subId}"` : ''}>${sub}</div>
+    </div>`;
+  el.innerHTML =
+    card('#0091ff', kpiIcon('list'), 'Total tasks', 'kpi-total', total, 'Including subtasks') +
+    card('#008844', kpiRing(0), 'Overall completion', 'kpi-pct', '&hellip;', '<span id="kpi-pct-sub">calculating&hellip;</span>') +
+    card('#5f55ee', kpiIcon('spark'), 'Active', 'kpi-active', '&hellip;', 'In-flight work') +
+    card('#8d8d8d', kpiIcon('inbox'), 'Not started', 'kpi-notstarted', '&hellip;', 'Open-type statuses') +
+    card('#12a594', kpiIcon('check'), 'Done', 'kpi-done', '&hellip;', 'Done-type statuses') +
+    card('#e5484d', kpiIcon('flag'), 'Complete', 'kpi-complete', '&hellip;', 'Closed-type statuses') +
+    card('#ab4aba', kpiIcon('help'), 'Uncategorized', 'kpi-uncat', '&hellip;', 'reading Area field&hellip;', 'kpi-uncat-sub');
 }
 
 
@@ -1600,6 +1640,17 @@ function updateStatusKpis(tasks) {
   setKpi('kpi-active', groups['Active']);
   setKpi('kpi-done', groups['Done']);
   setKpi('kpi-complete', groups['Complete']);
+  // Completion = closed-type statuses over everything in the list.
+  const closed = groups['Complete'];
+  const pct = total ? Math.round(closed / total * 1000) / 10 : 0;
+  setKpi('kpi-pct', pct + '%');
+  const sub = document.getElementById('kpi-pct-sub');
+  if (sub) sub.textContent = closed + ' of ' + total + ' done';
+  const ring = document.querySelector('#kpi-pct') && document.querySelector('#kpi-pct').closest('.kpi').querySelector('.kpi-ring');
+  if (ring) {
+    const c = 2 * Math.PI * 13;
+    ring.querySelectorAll('circle')[1].setAttribute('stroke-dashoffset', (c * (1 - pct / 100)).toFixed(1));
+  }
 }
 
 function qEsc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
