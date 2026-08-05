@@ -37,7 +37,7 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .muted { color: var(--text-muted); font-size: 12px; }
 .tagline { color: var(--text-muted); margin-bottom: 16px; font-size: 13px; }
 
-.tabs { position: sticky; top: 0; z-index: 20; display: flex; gap: 4px; padding: 5px; margin: 14px 0 18px; flex-wrap: wrap; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--border); border-radius: 14px; }
+.tabs { position: sticky; top: 0; z-index: 60; display: flex; gap: 4px; padding: 5px; margin: 14px 0 18px; flex-wrap: wrap; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--border); border-radius: 14px; }
 .tab { padding: 7px 14px; cursor: pointer; border: none; background: none; font: inherit; font-weight: 500; color: var(--text-muted); border-radius: 9px; transition: background .15s, color .15s; }
 .tab.active { color: var(--text); background: var(--surface); font-weight: 600; box-shadow: var(--shadow-sm); }
 .tab:hover:not(.active) { color: var(--text); background: var(--hover); }
@@ -312,7 +312,10 @@ table tr:hover { background: var(--surface-2); }
 .ms-empty { padding: 14px 8px; text-align: center; color: var(--text-subtle); font-size: 11px; font-style: italic; }
 
 /* Make filterbar overflow visible so dropdowns show */
-.filterbar { overflow: visible; }
+/* The glass panels below use backdrop-filter, which creates its own stacking
+   context — without an explicit layer here the open dropdown would be painted
+   behind them. Keep: tabs (60) > filter bar (40) > content. */
+.filterbar { overflow: visible; position: relative; z-index: 40; }
 
 /* ---- Theme chips (quick filters) ---- */
 .theme-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
