@@ -723,10 +723,10 @@ textarea.wr-input { resize:vertical; }
       <button class="tab" data-tab="tree">Tree Tasks</button>
       <button class="tab" data-tab="reports">Weekly Reports</button>
       <div class="theme-toggle" id="theme-toggle" role="radiogroup" aria-label="Colour theme">
-        <button type="button" data-theme-set="light" role="radio" aria-checked="false" aria-label="Light mode" title="Light mode">
+        <button type="button" data-theme-set="light" role="radio" aria-checked="true" aria-label="Light mode" title="Light mode">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
         </button>
-        <button type="button" data-theme-set="dark" role="radio" aria-checked="true" aria-label="Dark mode" title="Dark mode">
+        <button type="button" data-theme-set="dark" role="radio" aria-checked="false" aria-label="Dark mode" title="Dark mode">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5z"/></svg>
         </button>
       </div>
@@ -1176,9 +1176,15 @@ textarea.wr-input { resize:vertical; }
  *       Tree Tasks, Status Breakdown, Timeline, Risks.
  * Charts are rendered with Chart.js; the in-slice numbers use an inline plugin.
  * ========================================================================== */
-// ---------- Theme (dark is the default and the design baseline) ----------
+// ---------- Theme ----------
+// Light is what the dashboard opens with; dark remains the design baseline the
+// palette was built from. A stored choice always wins over the default.
 const THEME_KEY = 'dashboard-clickup_theme';
-function savedTheme() { try { return localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'; } catch (e) { return 'dark'; } }
+const DEFAULT_THEME = 'light';
+function savedTheme() {
+  try { const v = localStorage.getItem(THEME_KEY); return (v === 'light' || v === 'dark') ? v : DEFAULT_THEME; }
+  catch (e) { return DEFAULT_THEME; }
+}
 
 // Charts are built once, so a theme switch has to push the new palette into
 // Chart.js defaults and refresh every live instance.
