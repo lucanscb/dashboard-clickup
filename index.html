@@ -22,33 +22,32 @@
      Surfaces are translucent so the animation shows subtly through/around them. */
   color-scheme: dark;
   --bg: transparent;
-  --surface: rgba(24,25,28,0.66); --surface-2: rgba(40,42,47,0.55); --hover: rgba(255,255,255,0.06);
-  --border: rgba(255,255,255,0.10); --border-subtle: rgba(255,255,255,0.06); --border-strong: rgba(255,255,255,0.16);
-  --text:#ffffff; --text-muted:rgba(255,255,255,0.85); --text-subtle:rgba(255,255,255,0.62);
-  --accent:#48484d; --accent-hover:#5c5c62; --link:#5ea8ff;
-  --ring:rgba(94,168,255,0.45);
-  --shadow-sm:0 1px 2px rgba(0,0,0,0.5);
+  --surface:#090909; --surface-2:rgba(247,249,250,0.05); --hover:rgba(247,249,250,0.08);
+  --border:rgba(247,249,250,0.20); --border-subtle:rgba(247,249,250,0.10); --border-strong:rgba(247,249,250,0.30);
+  --text:#f7f9fa; --text-muted:#a9abac; --text-subtle:#828384;
+  --accent:#af50ff; --accent-hover:#bd6dff; --link:#e1bdff; --decor:#af50ff;
+  --ring:rgba(175,80,255,0.45);
+  --shadow-sm:none;
   --shadow-md:0 10px 40px rgba(0,0,0,0.6);
-  --glass:rgba(20,21,24,0.55);
+  --glass:rgba(51,50,72,0.70);
   /* opaque surfaces: popovers, dialogs and sticky headers never use glass */
-  --popover:#17181c; --dialog:rgba(22,23,26,0.97); --field:#1f2025; --control:#22242a;
-  --panel-solid:rgba(22,23,26,0.9); --panel-2-solid:rgba(40,42,47,0.85); --th-solid:rgba(20,21,24,0.97);
-  --stage:#000000; --scrim:rgba(0,0,0,0.12); --backdrop:rgba(0,0,0,0.62);
-  --blur:blur(22px) saturate(150%); --blur-soft:blur(20px) saturate(140%);
+  --popover:#111112; --dialog:#0d0d0e; --field:rgba(247,249,250,0.04); --control:rgba(247,249,250,0.08);
+  --panel-solid:#0d0d0e; --panel-2-solid:rgba(247,249,250,0.06); --th-solid:#0d0d0e;
+  --stage:#090909; --scrim:rgba(0,0,0,0.12); --backdrop:rgba(9,9,9,0.72);
+  --blur:none; --blur-soft:none;
   /* semantic surfaces */
-  --alert-bg:rgba(26,27,31,0.92); --alert-danger-bg:#2a1416; --alert-info-bg:#12233a;
-  --ok-bg:#0f2a1e; --ok-border:#1f4a38; --warn-bg:#2a2410; --warn-border:#4a3f16;
-  --err-bg:#2a1416; --err-border:#4a1f22; --err-text:#fca5a5;
-  --console-bg:#0d0e11; --log-ok:#34d399; --log-warn:#fbbf24; --log-err:#f87171;
-  --accent-soft:rgba(95,85,238,0.16); --accent-soft-border:rgba(95,85,238,0.5); --accent-soft-text:#a5b4fc; --note-bg:rgba(95,85,238,0.12);
-  --pos:#6cb0ff; --neg:#34d399; --warn-text:#fbbf24;
+  --alert-bg:rgba(247,249,250,0.04); --alert-danger-bg:rgba(229,72,77,0.10); --alert-info-bg:rgba(175,80,255,0.10);
+  --ok-bg:rgba(18,165,148,0.10); --ok-border:rgba(18,165,148,0.35); --warn-bg:rgba(245,158,11,0.10); --warn-border:rgba(245,158,11,0.35);
+  --err-bg:rgba(229,72,77,0.10); --err-border:rgba(229,72,77,0.35); --err-text:#ff9ea1;
+  --console-bg:#050505; --log-ok:#34d399; --log-warn:#fbbf24; --log-err:#ff9ea1;
+  --accent-soft:rgba(175,80,255,0.14); --accent-soft-border:rgba(175,80,255,0.40); --accent-soft-text:#e1bdff; --note-bg:rgba(175,80,255,0.10);
+  --pos:#e1bdff; --neg:#34d399; --warn-text:#fbbf24;
   /* charts */
-  --chart-text:#c7c8cd; --chart-grid:rgba(255,255,255,0.08);
+  --chart-text:#a9abac; --chart-grid:rgba(247,249,250,0.10);
   --title-shadow:0 1px 10px rgba(0,0,0,0.55);
-  /* Apple reference: only two radii exist — a pill for anything interactive,
-     8px for cards, images and inputs. Nothing in between. */
-  --radius-pill:980px; --radius-card:8px; --radius-input:8px;
-  --decor:#2997ff;
+  /* Shape language is per theme: dark follows the dope.security reference
+     (19.2px cards, 8px buttons, 1584px pills), light follows Apple. */
+  --radius-card:19.2px; --radius-btn:8px; --radius-pill:1584px; --radius-input:6px;
 }
 /* Apple style reference — light is the themed surface it describes:
    near-white canvas, one vivid blue used only for action, hairline borders
@@ -81,6 +80,7 @@
   --pos:#0071e3; --neg:#067647; --warn-text:#b54708;
   --chart-text:#6e6e73; --chart-grid:rgba(0,0,0,0.08);
   --title-shadow:none;
+  --radius-card:8px; --radius-btn:980px; --radius-pill:980px; --radius-input:8px;
 }
 html, body { background: var(--stage); }
 * { box-sizing: border-box; }
@@ -98,7 +98,7 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .muted { color: var(--text-muted); font-size: 12px; }
 .tagline { color: var(--text-muted); margin-bottom: 20px; font-size: 17px; font-weight: 300; letter-spacing: -0.016em; }
 
-.tabs { position: sticky; top: 0; z-index: 60; display: flex; gap: 4px; padding: 5px; margin: 14px 0 18px; flex-wrap: wrap; background: var(--glass); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--border); border-radius: var(--radius-pill); }
+.tabs { position: sticky; top: 0; z-index: 60; display: flex; gap: 4px; padding: 5px; margin: 14px 0 18px; flex-wrap: wrap; background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-pill); }
 .tab { padding: 8px 16px; cursor: pointer; border: none; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--text-muted); border-radius: var(--radius-pill); transition: background .15s, color .15s; }
 .tab.active { color: var(--text); background: var(--surface); font-weight: 600; box-shadow: var(--shadow-sm); }
 .tab:hover:not(.active) { color: var(--text); background: var(--hover); }
@@ -273,7 +273,7 @@ table tr:hover { background: var(--surface-2); }
 .filt select, .filt input { padding: 8px 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-input); font: inherit; font-size: 12px; background: var(--surface); min-width: 0; }
 .filt select:focus, .filt input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--ring); }
 .filt-actions { display: flex; gap: 6px; align-items: center; }
-.btn { padding: 8px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); background: var(--surface); font: inherit; font-size: 13px; font-weight: 400; cursor: pointer; color: var(--text); letter-spacing: -0.016em; transition: background .12s, border-color .12s, transform .04s; }
+.btn { padding: 8px 16px; border: 1px solid var(--border-strong); border-radius: var(--radius-btn); background: var(--surface); font: inherit; font-size: 13px; font-weight: 400; cursor: pointer; color: var(--text); letter-spacing: -0.016em; transition: background .12s, border-color .12s, transform .04s; }
 .btn:hover { background: var(--hover); }
 .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 /* Apple's secondary: outlined pill in link blue, paired with a filled primary */
