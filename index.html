@@ -123,6 +123,9 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
   text-transform: uppercase; color: var(--text-subtle); margin-bottom: 6px; }
 .article-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px; color: var(--text); }
 .article-text { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.article-byline { color: var(--text-subtle); font-weight: 400; }
+.article-byline a { color: var(--link); text-decoration: none; }
+.article-byline a:hover { text-decoration: underline; }
 .article-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .article-actions .article-meta { font-size: 11px; color: var(--text-subtle); }
 .article-actions .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
@@ -1394,7 +1397,7 @@ document.addEventListener('dashboard-ready', () => {
 const TAB_INTRO = {
   dashboard: {
     eyebrow: 'Case study',
-    title: 'How I built this dashboard',
+    title: 'How I built this dashboard <span class="article-byline">\u00b7 Lucas Bueno <a href="https://www.linkedin.com/in/joaolucans/" target="_blank" rel="noopener">LinkedIn &#8599;</a></span>',
     text: 'I built this dashboard as a workaround: the ClickUp free plan caps the reporting and automation you can build inside the tool, so I moved the reporting layer outside it. The article tells the whole story, starting with the first prototype as a Claude Artifact, then the ClickUp integration, the Weekly Reports module and its Slack delivery model, and finally moving everything out of the Artifact onto GitHub + Vercel as the public web app you are looking at now. It also covers the decisions I had to make along the way: MCP connector versus REST API, how I generated the ~1,555 demo tasks through the API, and what the scheduled automation actually does.',
     note: '<strong>Demonstration.</strong> This is a public mirror of a private dashboard I built for a volunteer initiative. The workspace, the ~1,555 tasks and every person named in them are fictional, created only for this demo.',
     actions: true
@@ -1455,7 +1458,7 @@ function renderTabIntro(tab) {
   if (!cfg) { host.classList.add('is-hidden'); return; }
   host.classList.remove('is-hidden');
   document.getElementById('tab-intro-eyebrow').textContent = cfg.eyebrow || '';
-  document.getElementById('tab-intro-title').textContent = cfg.title || '';
+  document.getElementById('tab-intro-title').innerHTML = cfg.title || '';
   document.getElementById('tab-intro-text').textContent = cfg.text || '';
   document.getElementById('tab-intro-points').innerHTML = (cfg.points || []).map(p => '<li>' + p + '</li>').join('');
   document.getElementById('tab-intro-outro').innerHTML = cfg.outro || '';
