@@ -123,6 +123,14 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
   text-transform: uppercase; color: var(--text-subtle); margin-bottom: 6px; }
 .article-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px; color: var(--text); }
 .article-text { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.article-card.is-collapsed .article-text { display: -webkit-box; -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical; overflow: hidden; }
+.article-card.is-collapsed .article-points,
+.article-card.is-collapsed .article-outro,
+.article-card.is-collapsed .article-note { display: none; }
+.article-more { margin-top: 8px; padding: 0; border: none; background: none; font: inherit;
+  font-size: 12px; font-weight: 600; color: var(--link); cursor: pointer; }
+.article-more:hover { text-decoration: underline; }
 .article-byline { color: var(--text-subtle); font-weight: 400; }
 .article-byline a { color: var(--link); text-decoration: none; }
 .article-byline a:hover { text-decoration: underline; }
@@ -862,6 +870,7 @@ textarea.wr-input { resize:vertical; }
         <ul class="article-points" id="tab-intro-points"></ul>
         <p class="article-text article-outro" id="tab-intro-outro"></p>
         <p class="article-note" id="tab-intro-note"></p>
+        <button class="article-more" id="tab-intro-more" type="button" aria-expanded="false">Show more</button>
       </div>
       <div class="article-actions" id="tab-intro-actions">
         <button class="btn primary" type="button" id="tab-intro-cta">&#128196; Read the full article</button>
@@ -1464,7 +1473,19 @@ function renderTabIntro(tab) {
   document.getElementById('tab-intro-outro').innerHTML = cfg.outro || '';
   document.getElementById('tab-intro-note').innerHTML = cfg.note || '';
   document.getElementById('tab-intro-actions').classList.toggle('is-hidden', !cfg.actions);
+  abCollapseIntro(true);
 }
+function abCollapseIntro(collapsed) {
+  const card = document.getElementById('tab-intro');
+  const btn = document.getElementById('tab-intro-more');
+  if (!card || !btn) return;
+  card.classList.toggle('is-collapsed', collapsed);
+  btn.textContent = collapsed ? 'Show more' : 'Show less';
+  btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+}
+document.getElementById('tab-intro-more').addEventListener('click', () => {
+  abCollapseIntro(!document.getElementById('tab-intro').classList.contains('is-collapsed'));
+});
 renderTabIntro('dashboard');
 
 // ---------- About tab: the article ----------
