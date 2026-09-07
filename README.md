@@ -1,8 +1,16 @@
+<<<<<<< HEAD
 > **Hi, I'm Lucas Bueno.** Technology and AI enthusiast, with 10+ years of experience in the
 > field. Have a look at my profile, and if you have questions about this project or just
 > want to talk tech and AI, it would be a pleasure.
 >
 > **[Lucas Bueno on LinkedIn](https://www.linkedin.com/in/joaolucans/)**
+=======
+> **Hi, I'm Lucas Bueno** technology and AI enthusiast, 10+ years of experience in the
+> field. Have a look at my profile, and if you have questions about this project or just
+> want to talk tech and AI, it would be a pleasure.
+>
+> **[Lucas Bueno — LinkedIn](https://www.linkedin.com/in/joaolucans/)**
+>>>>>>> aba65fb58899b2f5bbd66b791c31ea644fd02864
 
 # Dashboard ClickUp - Tracker
 
