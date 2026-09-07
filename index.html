@@ -126,6 +126,12 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .article-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .article-actions .article-meta { font-size: 11px; color: var(--text-subtle); }
 .article-actions .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
+.article-points { margin: 8px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text-muted); }
+.article-points li { margin: 4px 0; }
+.article-points strong { color: var(--text); font-weight: 600; }
+.article-points:empty { display: none; }
+.article-outro { margin-top: 8px; }
+.article-outro:empty { display: none; }
 .article-note { margin: 10px 0 0; padding: 8px 10px; background: var(--note-bg);
   border: 1px solid var(--accent-soft-border); border-radius: var(--radius-btn);
   font-size: 12px; line-height: 1.5; color: var(--text-muted); }
@@ -782,6 +788,8 @@ textarea.wr-input { resize:vertical; }
         <span class="article-eyebrow" id="tab-intro-eyebrow"></span>
         <h3 class="article-title" id="tab-intro-title"></h3>
         <p class="article-text" id="tab-intro-text"></p>
+        <ul class="article-points" id="tab-intro-points"></ul>
+        <p class="article-text article-outro" id="tab-intro-outro"></p>
         <p class="article-note" id="tab-intro-note"></p>
       </div>
       <div class="article-actions" id="tab-intro-actions">
@@ -1302,50 +1310,57 @@ document.addEventListener('dashboard-ready', () => {
 const TAB_INTRO = {
   dashboard: {
     eyebrow: 'Case study',
-    title: 'How this dashboard was built',
-    text: 'This dashboard started as a workaround: the ClickUp free plan caps the reporting and automation you can build inside the tool, so I built the reporting layer outside it. The article tells the whole story, starting with the first prototype as a Claude Artifact, then the ClickUp integration, the Weekly Reports module and its Slack delivery model, and finally moving everything out of the Artifact onto GitHub + Vercel as the public web app you are looking at now. It also covers the decisions behind it: MCP connector versus REST API, how the ~1,555 demo tasks were generated through the API, and what the scheduled automation actually does.',
+    title: 'How I built this dashboard',
+    text: 'I built this dashboard as a workaround: the ClickUp free plan caps the reporting and automation you can build inside the tool, so I moved the reporting layer outside it. The article tells the whole story, starting with the first prototype as a Claude Artifact, then the ClickUp integration, the Weekly Reports module and its Slack delivery model, and finally moving everything out of the Artifact onto GitHub + Vercel as the public web app you are looking at now. It also covers the decisions I had to make along the way: MCP connector versus REST API, how I generated the ~1,555 demo tasks through the API, and what the scheduled automation actually does.',
     note: '<strong>Demonstration.</strong> This is a public mirror of a private dashboard I built for a volunteer initiative. The workspace, the ~1,555 tasks and every person named in them are fictional, created only for this demo.',
     actions: true
   },
   bystatus: {
     eyebrow: 'Tasks Filters',
     title: 'Find any task without opening ClickUp',
-    text: 'Built to answer the two questions that came up in every weekly meeting: what is this person working on, and what is late. The chips at the top jump straight to the common states; below them you can combine assignee, status, area, a due-date range and free text. Results stay grouped by status so you can collapse what you do not need, and Export PDF takes the current filter out of the app with every task name still linking back to ClickUp.'
+    text: 'I built this tab to answer the two questions that came up in every weekly meeting: what is this person working on, and what is late. The chips at the top are the states I checked most often; below them you can combine assignee, status, area, a due-date range and free text. Results stay grouped by status so you can collapse what you do not need, and Export PDF takes the current filter out of the app with every task name still linking back to ClickUp.'
   },
   defects: {
     eyebrow: 'Blocked',
     title: 'What is stuck, and who is stuck',
-    text: 'Blocked work is what a status meeting actually needs to talk about, and in a flat list it disappears among hundreds of rows. Everything here is scoped to the ClickUp status Blocked: the counters tell you how much of it is also overdue or missing an owner, and the charts break it down by area, feature and priority. The two bar lists show where the blockage concentrates, by area and by person.'
+    text: 'Blocked work is what a status meeting actually needs to talk about, and in a flat list it kept disappearing among hundreds of rows, so I gave it a tab of its own. Everything here is scoped to the ClickUp status Blocked: the counters tell you how much of it is also overdue or missing an owner, and the charts break it down by area, feature and priority. I added the two bar lists to show where the blockage concentrates, by area and by person.'
   },
   risks: {
     eyebrow: 'Risks & Inconsistencies',
     title: 'Problems the data itself reveals',
-    text: 'A report is only as good as the data behind it, so this tab looks for what people forget to fill in. The rules run again on every load: open defects, tasks on hold, work waiting on review, non-complete tasks with nobody assigned, and parent-child inconsistencies, where a parent is marked complete while its subtasks are not. Every item links straight to the task so it can be fixed at the source.'
+    text: 'A report is only as good as the data behind it, so I wrote this tab to look for what people forget to fill in. The rules I defined run again on every load: open defects, tasks on hold, work waiting on review, non-complete tasks with nobody assigned, and parent-child inconsistencies, where a parent is marked complete while its subtasks are not. Every item links straight to the task so it can be fixed at the source.'
   },
   swimlanes: {
     eyebrow: 'Swimlanes',
     title: 'Area against status, in one grid',
-    text: 'This is the view I use to compare teams: how Design is doing next to Development, without building a separate dashboard card for each one. It is a matrix of Area against the real ClickUp statuses, with a completion bar per area. The columns come from the workspace itself, so renaming or adding a status in ClickUp changes the grid here.'
+    text: 'This is the view I use to compare teams: how Design is doing next to Development, without building a separate dashboard card for each one. I laid it out as a matrix of Area against the real ClickUp statuses, with a completion bar per area. The columns come from the workspace itself, so renaming or adding a status in ClickUp changes the grid here.'
   },
   status: {
     eyebrow: 'Status Breakdown',
     title: 'The distribution behind the KPI cards',
-    text: 'The cards on the Dashboard group statuses by their ClickUp type, which is useful for a summary and useless when you need the exact numbers. This tab is the raw table: every status in the order the workspace defines, with its type, its count and its share of the project.'
+    text: 'The cards on the Dashboard group statuses by their ClickUp type, which is useful for a summary and useless when you need the exact numbers, so I kept the raw table here as well. Every status appears in the order the workspace defines, with its type, its count and its share of the project.'
   },
   timeline: {
     eyebrow: 'Timeline',
     title: 'Is work being created faster than it is closed?',
-    text: 'Totals hide the trend. This tab counts created tasks by their creation date and closed tasks by their due date with status Complete, then draws the cumulative net backlog on top, so the gap between the two is the honest answer. The lists underneath show both sets side by side, each with its own period filter.'
+    text: 'Totals hide the trend, and the gap between the two curves was what I wanted to see. This tab counts created tasks by their creation date and closed tasks by their due date with status Complete, then draws the cumulative net backlog on top, so that distance is the honest answer. I put both sets side by side underneath, each with its own period filter.'
   },
   tree: {
     eyebrow: 'Tree Tasks',
     title: 'The hierarchy, exactly as ClickUp has it',
-    text: 'A flat list loses the parent and subtask relationship, which is usually where the real size of a piece of work lives. This tab mirrors the ClickUp hierarchy down to three levels, with the same columns as the other views. It builds itself the first time you open the tab, so the initial load stays fast.'
+    text: 'A flat list loses the parent and subtask relationship, which is usually where the real size of a piece of work lives, so I rebuilt the hierarchy here. It mirrors ClickUp down to three levels, with the same columns as the other views. I load it only when you open the tab, so the initial load stays fast.'
   },
   reports: {
     eyebrow: 'Weekly Reports',
     title: 'From a dashboard people visit to a report that finds them',
-    text: 'A dashboard only helps whoever remembers to open it. In the volunteer project most people would never have access to this screen, so the information had to travel to them instead. The module models that in four layers, one per card: when the delivery fires (day, time, timezone and the message printed at the top of every report), reusable filter configurations, the Slack channels that receive them, and the individual people, each getting a report filtered to their own tasks. A configuration is saved once and reused by any channel or user, and a live counter shows how many tasks it matches before you commit to it. General Reports, below, is the executive view over the same data: the recent activity table and its own multi-page PDF.',
+    text: 'A dashboard only helps whoever remembers to open it. In the volunteer project most people would never have access to this screen, so I decided the information had to travel to them instead. I modelled that in four layers, one per card:',
+    points: [
+      '<strong>1 &middot; Automatic Weekly Delivery</strong> decides when the system fires: day of the week, time, timezone, and the message printed at the top of every report.',
+      '<strong>2 &middot; Report Configurations Filters</strong> are the saved filters: status, area, assignee app and overdue, named once and reused by any channel or person. A live counter shows how many tasks a configuration matches before you commit to it.',
+      '<strong>3 &middot; Weekly Report Slack &mdash; Channels</strong> points a report at a team channel, each channel with its own configuration, its own on/off switch and buttons to preview, export or test it.',
+      '<strong>4 &middot; Weekly Report Slack &mdash; Users</strong> does the same per person: every Assignee App value gets a report filtered to their own tasks, so nobody receives someone else&rsquo;s backlog.'
+    ],
+    outro: 'General Reports, below, is the executive view over the same data: the recent activity table and its own multi-page PDF.',
     note: '<strong>Demonstration.</strong> The filters, the schedule logic and the PDFs are real. The Slack transport is stubbed and the cron endpoint that would wake the app every few minutes is not implemented in this public mirror, so nothing is ever sent: running a delivery walks the real pipeline in a console and stops at the last step.'
   }
 };
@@ -1358,6 +1373,8 @@ function renderTabIntro(tab) {
   document.getElementById('tab-intro-eyebrow').textContent = cfg.eyebrow || '';
   document.getElementById('tab-intro-title').textContent = cfg.title || '';
   document.getElementById('tab-intro-text').textContent = cfg.text || '';
+  document.getElementById('tab-intro-points').innerHTML = (cfg.points || []).map(p => '<li>' + p + '</li>').join('');
+  document.getElementById('tab-intro-outro').innerHTML = cfg.outro || '';
   document.getElementById('tab-intro-note').innerHTML = cfg.note || '';
   document.getElementById('tab-intro-actions').classList.toggle('is-hidden', !cfg.actions);
 }
