@@ -736,6 +736,14 @@ code { background: var(--surface-2); }
 .theme-toggle button:hover { color: var(--text); }
 .theme-toggle button.on { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
 @media (max-width: 640px) { .theme-toggle { margin-left: 0; } }
+/* On a phone the tab bar wraps onto several rows, and a pill radius turns that
+   into an odd oval with empty corners. Square it off and let the tabs share the
+   row evenly so there are no gaps. */
+@media (max-width: 700px) {
+  .tabs { border-radius: var(--radius-card); padding: 6px; gap: 5px; }
+  .tab { flex: 1 1 auto; text-align: center; padding: 7px 11px; font-size: 13px; }
+  .theme-toggle { flex: 0 0 auto; margin-left: auto; }
+}
 
 /* ---- Black-hole backdrop + glass layering ---- */
 #bh-stage, #bh-bg, #bh-fg, #bh-scrim { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; }
