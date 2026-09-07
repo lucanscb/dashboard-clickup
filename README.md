@@ -1,4 +1,10 @@
-# Dashboard ClickUp
+> **Hi, I'm Lucas Bueno.** Technology and AI enthusiast, with 10+ years of experience in the
+> field. Have a look at my profile, and if you have questions about this project or just
+> want to talk tech and AI, it would be a pleasure.
+>
+> **[Lucas Bueno on LinkedIn](https://www.linkedin.com/in/joaolucans/)**
+
+# Dashboard ClickUp - Tracker
 
 A live, read-only project dashboard for a single **ClickUp** list. It reads tasks, custom
 fields and statuses straight from the ClickUp REST API and renders an executive view of
@@ -8,12 +14,6 @@ automatic risk/inconsistency report and a Slack-oriented weekly-report module.
 
 **Live:** <https://dashboard-clickup.vercel.app> · **Stack:** vanilla HTML/CSS/JS + one
 Vercel serverless proxy · **Build step:** none.
-
-> **Hi, I'm Lucas Bueno.** Technology and AI enthusiast, with 10+ years of experience in the
-> field. Have a look at my profile, and if you have questions about this project or just
-> want to talk tech and AI, it would be a pleasure.
->
-> **[Lucas Bueno on LinkedIn](https://www.linkedin.com/in/joaolucans/)**
 
 The rest of this document is the technical description: architecture, data flow, HTTP
 contracts, the front-end internals and the security model.
