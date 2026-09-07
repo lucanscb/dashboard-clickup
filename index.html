@@ -126,6 +126,8 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .article-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .article-actions .article-meta { font-size: 11px; color: var(--text-subtle); }
 .article-actions .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
+/* the card belongs to the Dashboard tab only */
+.article-card.is-hidden { display: none; }
 @media (max-width: 700px) {
   .article-card { padding: 14px 16px; gap: 14px; }
   .article-actions { align-items: stretch; width: 100%; }
@@ -778,9 +780,9 @@ textarea.wr-input { resize:vertical; }
         <h3 class="article-title">How this dashboard was built</h3>
         <p class="article-text">This dashboard started as a workaround: the ClickUp free plan caps the reporting and
           automation you can build inside the tool, so I built the reporting layer outside it. The article tells the
-          whole story — the first prototype as a Claude Artifact, the ClickUp integration, the Weekly Reports module
-          and its Slack delivery model, and finally moving everything out of the Artifact onto GitHub + Vercel as the
-          public web app you are looking at now. It also covers the decisions behind it: MCP connector versus REST API,
+          whole story, starting with the first prototype as a Claude Artifact, then the ClickUp integration, the
+          Weekly Reports module and its Slack delivery model, and finally moving everything out of the Artifact onto
+          GitHub + Vercel as the public web app you are looking at now. It also covers the decisions behind it: MCP connector versus REST API,
           how the ~1,555 demo tasks were generated through the API, and what the scheduled automation actually does.</p>
       </div>
       <div class="article-actions">
@@ -1302,6 +1304,8 @@ document.querySelectorAll('.tab').forEach(t => {
     document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
     document.getElementById('panel-' + t.dataset.tab).classList.add('active');
+    const articleCard = document.querySelector('.article-card');
+    if (articleCard) articleCard.classList.toggle('is-hidden', t.dataset.tab !== 'dashboard');
     if (t.dataset.tab === 'tree' && typeof openTreeTab === 'function') openTreeTab();
     if (t.dataset.tab === 'bystatus' && typeof renderByStatusBody === 'function' && ALL_TASKS) renderByStatusBody(ALL_TASKS);
     if (t.dataset.tab === 'timeline' && typeof renderTimeline === 'function' && ALL_TASKS) renderTimeline(ALL_TASKS);

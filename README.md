@@ -9,11 +9,11 @@ automatic risk/inconsistency report and a Slack-oriented weekly-report module.
 **Live:** <https://dashboard-clickup.vercel.app> · **Stack:** vanilla HTML/CSS/JS + one
 Vercel serverless proxy · **Build step:** none.
 
-> **Hi, I'm Lucas Bueno** — technology and AI enthusiast, 10+ years of experience in the
+> **Hi, I'm Lucas Bueno.** Technology and AI enthusiast, with 10+ years of experience in the
 > field. Have a look at my profile, and if you have questions about this project or just
 > want to talk tech and AI, it would be a pleasure.
 >
-> **[Lucas Bueno — LinkedIn](https://www.linkedin.com/in/joaolucans/)**
+> **[Lucas Bueno on LinkedIn](https://www.linkedin.com/in/joaolucans/)**
 
 The rest of this document is the technical description: architecture, data flow, HTTP
 contracts, the front-end internals and the security model.
@@ -42,7 +42,7 @@ contracts, the front-end internals and the security model.
               │ CLICKUP_API_TOKEN (server-side only)     │ Upstash Redis REST
               ▼                                          ▼   (optional)
       ClickUp REST API v2                        dashboard-clickup:weekly-reports
-      — the configured list only
+      (the configured list only)
 ```
 
 Two serverless functions, one static document. Nothing else runs on the server; there is
@@ -62,7 +62,7 @@ no session, no cookie, no user record and no write path back into ClickUp.
 4. Every task is reduced by `webappMapTask()` to a slim record (§4) and, in the same pass,
    its custom-field values are resolved through the option map into `TASK_CF[id]`.
 5. Statuses (order, colour, `type`) are read once from `GET /api/clickup?op=statuses`,
-   which proxies `GET /list/{id}` — so the UI mirrors whatever the workspace defines
+   which proxies `GET /list/{id}`, so the UI mirrors whatever the workspace defines
    rather than a hard-coded list.
 6. `fetchAllTasks()` compares the result against the cached snapshot, writes the new one
    and returns an integrity verdict (§5). The app dispatches `dashboard-ready`, the
@@ -83,7 +83,7 @@ its status code; transport failures return 502.
 | `tasks` | `GET /list/{id}/task?subtasks=true&include_closed=true&page=N` | `{ tasks: [], last_page: bool }` | `page` parsed as int and clamped to `0…500` |
 | `fields` | `GET /list/{id}/field` | `{ fields: [] }` | used for the `labels` option maps |
 | `statuses` \| `list` | `GET /list/{id}` | `{ statuses: [] }` | status order, colour and `type` |
-| anything else | — | `400 {"error":"unknown op"}` | allow-list, not a pass-through |
+| anything else | n/a | `400 {"error":"unknown op"}` | allow-list, not a pass-through |
 
 Successful responses set `Cache-Control: s-maxage=30, stale-while-revalidate=120`, so the
 Vercel edge absorbs reloads and shields the ClickUp rate limit.
@@ -102,10 +102,10 @@ PUT  /api/settings?ns=weekly-reports   → 200 { ok: true }        body: { value
 ```
 
 - `ns` is checked against a hard-coded allow-list (`['weekly-reports']`) so the endpoint
-  can never be used as an open key/value store — 400 otherwise.
+  can never be used as an open key/value store; 400 otherwise.
 - Payload capped at **256 KB**, enforced both while streaming the body and after
   serialisation (413).
-- Backed by Upstash Redis over its REST interface with plain `fetch` — no SDK, no
+- Backed by Upstash Redis over its REST interface with plain `fetch`, with no SDK and no
   dependency. Key: `dashboard-clickup:weekly-reports`.
 - Env vars are read under **either** naming scheme: `UPSTASH_REDIS_REST_URL/TOKEN`
   (database created directly on Upstash) or `KV_REST_API_URL/TOKEN` (injected by the
@@ -140,7 +140,7 @@ Two consequences worth knowing when reading the source:
 
 The migration reason is also a performance one. Over MCP, `custom_fields` and `parent` are
 stripped from the bulk response, so Area/Feature/Assignee App had to be fetched one task at
-a time — over a thousand extra calls against a 50-per-day beta quota. The REST list
+a time, which meant over a thousand extra calls against a 50-per-day beta quota. The REST list
 endpoint returns them inline, which is why per-task enrichment is now a no-op.
 
 ### Task record
@@ -157,8 +157,8 @@ endpoint returns them inline, which is why per-task enrichment is now a no-op.
 ```
 
 Custom fields live outside that record, in `TASK_CF[id] = { vals: { area, feature,
-'assignee app' }, parent, at }`. Statuses are kept **exactly as the API returns them** —
-lowercase — and only prettified at render time. Comparisons against saved configurations
+'assignee app' }, parent, at }`. Statuses are kept **exactly as the API returns them**,
+lowercase, and only prettified at render time. Comparisons against saved configurations
 are therefore case-insensitive; the display label `To Do` never leaks into a filter.
 
 ## 5. Fetching, caching and the integrity check
@@ -170,7 +170,7 @@ The paging loop is deliberately defensive:
 | Page size | 100 (ClickUp's fixed page size) |
 | Safety cap | `maxPages = 60` → 6,000 tasks |
 | Retries | 3 attempts per page, with the loader reporting rate-limit waits |
-| Hard failure | a page that fails all retries **aborts the load** — a truncated dataset is never rendered as if it were complete |
+| Hard failure | a page that fails all retries **aborts the load**, so a truncated dataset is never rendered as if it were complete |
 | De-duplication | `Set` of task ids across pages; a full page of duplicates stops the loop |
 | Termination | fewer than 100 rows, or an empty page |
 
@@ -178,10 +178,10 @@ The result is snapshotted to `localStorage` (`dashboard-clickup_task_cache_v1`) 
 with fetch metadata (tool, pages, retries, elapsed ms). On the next load the fresh count is
 compared against the cached one:
 
-- `ok` — counts match, or the delta is shown as `Δ +12 vs last refresh (1543)`.
-- `warning` — the count dropped by **≥ 10%**; the banner says so instead of quietly
+- `ok`: counts match, or the delta is shown as `Δ +12 vs last refresh (1543)`.
+- `warning`: the count dropped by **≥ 10%**; the banner says so instead of quietly
   rendering a smaller project.
-- `fallback` — the fetch failed entirely; the last snapshot is rendered with the timestamp
+- `fallback`: the fetch failed entirely; the last snapshot is rendered with the timestamp
   it was taken.
 
 That verdict is what the green/amber banner above the tabs reports.
@@ -205,7 +205,7 @@ That verdict is what the green/amber banner above the tabs reports.
 | **Dashboard** | KPI strip (total, completion %, active, not started, done, complete, uncategorised) derived from ClickUp status `type`; overall doughnut; status distribution per Area; distribution by priority. Status chips act as filters and recompute the charts client-side. |
 | **Tasks Filters** | Compound filter over assignee app, status (multi-select), area, due-date range and free text, plus quick chips (Blocked, Overdue, In Review, In Progress, Ready for Approval, Backlog, Complete, Unassigned App). Grouped by status, collapsible, with **Export PDF (with links)**. |
 | **Blocked** | Everything scoped to `status = blocked`: totals, overdue share, missing-area and missing-assignee counters, distribution by area/feature/priority, and per-area / per-assignee bars. |
-| **Risks & Inconsistencies** | Rule-based report: open defects, tasks on hold, tasks awaiting review, unassigned non-complete tasks, and **parent–child status inconsistencies** found by walking the tree (a parent marked complete over children that are not). |
+| **Risks & Inconsistencies** | Rule-based report: open defects, tasks on hold, tasks awaiting review, unassigned non-complete tasks, and **parent-child status inconsistencies** found by walking the tree (a parent marked complete over children that are not). |
 | **Swimlanes** | Area × status matrix built from the live status list, with a completion bar per area. |
 | **Status Breakdown** | Every ClickUp status with its `type` (open / custom / done / closed), count and share. |
 | **Timeline** | Created (by `date_created`) vs closed (by `due_date`, status `complete`) bucketed by week/month, with cumulative net backlog on a second axis, and two independently filtered lists below. |
@@ -216,12 +216,12 @@ That verdict is what the green/amber banner above the tabs reports.
 
 Four configuration layers, each behind its own card and modal:
 
-1. **Automatic Weekly Delivery** — day, time, timezone, default message (MSG), on/off.
-2. **Report Configurations Filters** — reusable saved filters (statuses, area, assignee
+1. **Automatic Weekly Delivery**: day, time, timezone, default message (MSG), on/off.
+2. **Report Configurations Filters**: reusable saved filters (statuses, area, assignee
    apps, overdue-only, per-configuration message). A live counter shows how many tasks the
    filter currently matches.
-3. **Slack Channels** — name, channel ID, assigned configuration, weekly on/off.
-4. **Slack Users** — one row per `Assignee App` value, each with its own configuration,
+3. **Slack Channels**: name, channel ID, assigned configuration, weekly on/off.
+4. **Slack Users**: one row per `Assignee App` value, each with its own configuration,
    destination and weekly on/off.
 
 State goes through `WrStore`, which tries `/api/settings` first and falls back to
@@ -235,14 +235,14 @@ both the counter and the PDF.
 
 Real: the filters, the task matching, the recipient model, the schedule evaluation
 (current time vs day/hour/timezone), the generated PDF and the delivery console, which
-walks the actual pipeline step by step — build PDF → compose the intro message → attach →
+walks the actual pipeline step by step: build PDF → compose the intro message → attach →
 deliver.
 
 Simulated: the **Slack transport**. The last step is stubbed and labelled `SIMULATED`;
 nothing leaves the browser. The UI states this in both the schedule modal and the delivery
 console. In the private original this leg is a real Slack API call, driven by an external
 scheduler pinging an endpoint every few minutes; that endpoint (`/api/cron-reports`) is
-**not implemented in this public repository** — see §12.
+**not implemented in this public repository**. See §12.
 
 ## 8. PDF engine
 
@@ -263,8 +263,8 @@ the General Reports **Project Progress Report**.
 
 A CSS custom-property system with two complete palettes:
 
-- `:root` — dark, the default token set.
-- `:root[data-theme="light"]` — light, designed rather than inverted.
+- `:root`: dark, the default token set.
+- `:root[data-theme="light"]`: light, designed rather than inverted.
 
 Roughly 60 tokens cover surfaces, borders, text, accents, semantic states (ok / warn /
 error), the delivery console, chart text and grid. **Shape is themed too**: the dark theme
@@ -277,7 +277,7 @@ Two details that matter in the implementation:
   `--chart-text` / `--chart-grid` into `Chart.defaults` and calls `update('none')` on every
   live instance in `Chart.instances`.
 - The theme is applied on the `dashboard-ready` event (and once more after 1 s for
-  late-mounted charts), never during boot — the loading screen is intentionally left in its
+  late-mounted charts), never during boot, because the loading screen is intentionally left in its
   own palette.
 
 Default is **light**; the choice persists in `dashboard-clickup_theme`.
@@ -296,7 +296,7 @@ Default is **light**; the choice persists in `dashboard-clickup_theme`.
   SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy:
   strict-origin-when-cross-origin`, `Permissions-Policy` (geolocation, microphone and
   camera disabled).
-- **Chart.js is pinned and integrity-checked** —
+- **Chart.js is pinned and integrity-checked**:
   `chart.js@4.5.0` from jsDelivr with an SRI `sha384` hash and `crossorigin="anonymous"`;
   `connect-src` is `'self'`, so the page can only talk to its own functions.
 - The deployment is public and read-only, so `CLICKUP_LIST_ID` should point at a list with
@@ -311,18 +311,18 @@ modules and moving to per-response nonces is on the roadmap.
 | Variable | Required | Description |
 |---|---|---|
 | `CLICKUP_API_TOKEN` | yes | ClickUp personal API token (`pk_…`). Server-side only. |
-| `CLICKUP_LIST_ID` | yes | List ID to read — the digits at the end of `/li/<ID>`. |
+| `CLICKUP_LIST_ID` | yes | List ID to read (the digits at the end of `/li/<ID>`). |
 | `UPSTASH_REDIS_REST_URL` | no | Settings store. `KV_REST_API_URL` is accepted too. |
 | `UPSTASH_REDIS_REST_TOKEN` | no | Token for the store above (or `KV_REST_API_TOKEN`). |
 
 ```bash
 cp .env.example .env      # fill in token + list id
-npx vercel dev            # http://localhost:3000 — serves index.html and /api
+npx vercel dev            # http://localhost:3000, serves index.html and /api
 ```
 
 Deploy: import the repository on Vercel (framework preset **Other**), add the environment
 variables, deploy. `index.html` is served statically; `api/*.js` become Node functions
-(`engines.node >= 18`, global `fetch`). There is no install and no build — `package.json`
+(`engines.node >= 18`, global `fetch`). There is no install and no build; `package.json`
 has no dependencies.
 
 ### Repository layout
@@ -353,7 +353,7 @@ has no dependencies.
 - **6,000-task ceiling** from the `maxPages = 60` safety cap.
 - **Rate limits.** ClickUp's REST API allows 100 requests/minute per token on Free,
   Unlimited and Business. A full load of ~1,555 tasks is 16 task pages plus the field and
-  status calls — 18 requests; the 30-second edge cache keeps concurrent visitors from
+  status calls, 18 requests in total; the 30-second edge cache keeps concurrent visitors from
   multiplying that.
 
 ## 13. Roadmap
