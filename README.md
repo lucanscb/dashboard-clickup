@@ -333,6 +333,8 @@ has no dependencies.
 │   ├── clickup.js      # GET-only proxy, allow-listed to one list
 │   └── settings.js     # namespaced settings store (Upstash Redis REST)
 ├── index.html          # bridge + application + styles, single file
+├── about.html          # the article, an HTML fragment fetched by the About tab
+├── about-img/          # the article's figures
 ├── vercel.json         # HTTP security headers
 ├── package.json        # no dependencies; dev/deploy scripts only
 ├── .env.example

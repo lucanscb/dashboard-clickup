@@ -137,6 +137,74 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
   font-size: 12px; line-height: 1.5; color: var(--text-muted); }
 .article-note:empty { display: none; }
 .is-hidden { display: none !important; }
+
+/* ---- About tab: the article, rendered in the app ---- */
+.ab-layout { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 34px; align-items: start; }
+.ab-toc { position: sticky; top: 76px; max-height: calc(100vh - 110px); overflow-y: auto;
+  border-left: 1px solid var(--border-subtle); }
+.ab-toc a { display: block; padding: 5px 0 5px 12px; margin-left: -1px; font-size: 12px; line-height: 1.35;
+  color: var(--text-subtle); text-decoration: none; border-left: 2px solid transparent; }
+.ab-toc a:hover { color: var(--text); }
+.ab-toc a.part { color: var(--text-muted); font-weight: 600; margin-top: 12px; }
+.ab-toc a.on { color: var(--accent-soft-text); border-left-color: var(--accent); background: var(--accent-soft); }
+.ab-article { max-width: 74ch; font-size: 15px; line-height: 1.65; color: var(--text-muted); }
+.ab-article p { margin: 0 0 15px; }
+.ab-article strong, .ab-article em { color: var(--text); }
+.ab-article a { color: var(--link); }
+.ab-article ul, .ab-article ol { margin: 0 0 15px; padding-left: 22px; }
+.ab-article li { margin: 5px 0; }
+.ab-article code { background: var(--control); padding: 1px 6px; border-radius: 4px; font-size: 13px; color: var(--text); }
+.ab-article blockquote { margin: 0 0 24px; padding: 12px 16px; background: var(--surface-2);
+  border-left: 3px solid var(--accent); font-size: 14px; }
+.ab-article blockquote p:last-child { margin: 0; }
+.ab-article h1, .ab-article h2, .ab-article h3 { scroll-margin-top: 84px; }
+.ab-article h1.ab-part { font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-subtle); margin: 44px 0 8px; padding-top: 24px; border-top: 1px solid var(--border); }
+.ab-article h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.015em; color: var(--text); margin: 30px 0 12px; }
+.ab-article h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 22px 0 8px; }
+.ab-head { margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--border); }
+.ab-eyebrow { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text-subtle); margin-bottom: 10px; }
+.ab-h1 { font-size: 36px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.12; color: var(--text); margin: 0 0 10px; }
+.ab-sub { font-size: 15px; line-height: 1.5; color: var(--text-muted); margin: 0 0 12px; }
+.ab-by { font-size: 13px; color: var(--text-subtle); margin: 0; }
+.ab-fig { margin: 22px 0 26px; }
+.ab-fig-shot { position: relative; border: 1px solid var(--border); border-radius: var(--radius-card);
+  overflow: hidden; background: var(--surface); transition: transform .16s, border-color .16s, box-shadow .16s; }
+.ab-fig-shot img { display: block; width: 100%; height: auto; }
+.ab-fig[data-goto], .ab-fig[data-zoom], .ab-pair-shot img { cursor: pointer; }
+.ab-fig[data-goto]:hover .ab-fig-shot, .ab-fig[data-zoom]:hover .ab-fig-shot,
+.ab-fig:focus-visible .ab-fig-shot, .ab-pair:hover .ab-fig-shot {
+  transform: translateY(-3px); border-color: var(--accent); box-shadow: var(--shadow-md); }
+.ab-fig:focus { outline: none; }
+.ab-fig-action { position: absolute; right: 12px; bottom: 12px; padding: 6px 13px; font-size: 12px; font-weight: 600;
+  border-radius: var(--radius-pill); background: var(--accent); color: #fff; opacity: 0; transform: translateY(6px);
+  transition: opacity .16s, transform .16s; pointer-events: none; }
+.ab-fig:hover .ab-fig-action, .ab-fig:focus-visible .ab-fig-action { opacity: 1; transform: none; }
+.ab-fig figcaption { margin-top: 10px; font-size: 12.5px; line-height: 1.5; color: var(--text-subtle); }
+.ab-fig figcaption b { color: var(--text-muted); font-weight: 600; }
+.ab-pair-shot { display: flex; gap: 12px; justify-content: center; padding: 16px; }
+.ab-pair-shot img { width: auto; max-width: 46%; border: 1px solid var(--border-subtle); border-radius: var(--radius-btn); }
+.ab-lightbox { position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.84);
+  display: flex; align-items: center; justify-content: center; padding: 32px; }
+.ab-lightbox[hidden] { display: none; }
+.ab-lightbox img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+.ab-lightbox-close { position: absolute; top: 18px; right: 22px; width: 38px; height: 38px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.45); color: #fff; font-size: 20px; cursor: pointer; }
+.ab-top { position: fixed; right: 22px; bottom: 22px; width: 40px; height: 40px; border-radius: 50%;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font-size: 15px;
+  cursor: pointer; opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 70; }
+.ab-top.on { opacity: 1; pointer-events: auto; }
+@media (max-width: 900px) {
+  .ab-layout { grid-template-columns: 1fr; gap: 16px; }
+  .ab-toc { position: static; max-height: none; border-left: none; border-bottom: 1px solid var(--border-subtle);
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+  .ab-toc a:not(.part) { display: none; }
+  .ab-toc a.part { margin-top: 0; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 6px 10px; }
+  .ab-toc a.part.on { border-left-color: transparent; border-bottom-color: var(--accent); }
+  .ab-article { font-size: 14.5px; }
+  .ab-h1 { font-size: 27px; }
+}
 @media (max-width: 700px) {
   .article-card { padding: 14px 16px; gap: 14px; }
   .article-actions { align-items: stretch; width: 100%; }
@@ -793,8 +861,8 @@ textarea.wr-input { resize:vertical; }
         <p class="article-note" id="tab-intro-note"></p>
       </div>
       <div class="article-actions" id="tab-intro-actions">
-        <a class="btn primary" href="/ClickUp-Project-Tracker.pdf" download>&#128196; Download the article (PDF)</a>
-        <span class="article-meta">30 pages · 1.5&nbsp;MB · English</span>
+        <button class="btn primary" type="button" id="tab-intro-cta">&#128196; Read the full article</button>
+        <span class="article-meta">26 sections and an appendix · English</span>
       </div>
     </aside>
 
@@ -808,6 +876,7 @@ textarea.wr-input { resize:vertical; }
       <button class="tab" data-tab="timeline">Timeline</button>
       <button class="tab" data-tab="tree">Tree Tasks</button>
       <button class="tab" data-tab="reports">Weekly Reports</button>
+      <button class="tab" data-tab="about">About</button>
       <div class="theme-toggle" id="theme-toggle" role="radiogroup" aria-label="Colour theme">
         <button type="button" data-theme-set="light" role="radio" aria-checked="true" aria-label="Light mode" title="Light mode">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/></svg>
@@ -1163,7 +1232,22 @@ textarea.wr-input { resize:vertical; }
       <div id="risks"></div>
     </div>
 
+    <div id="panel-about" class="panel">
+      <div class="ab-layout">
+        <nav class="ab-toc" id="ab-toc" aria-label="Article contents"></nav>
+        <article class="ab-article" id="ab-article">
+          <p class="muted">Loading the article…</p>
+        </article>
+      </div>
+      <button class="ab-top" id="ab-top" type="button" title="Back to top" aria-label="Back to top">&#8593;</button>
+    </div>
+
   </div>
+</div>
+
+<div class="ab-lightbox" id="ab-lightbox" role="dialog" aria-modal="true" aria-label="Enlarged image" hidden>
+  <button class="ab-lightbox-close" id="ab-lightbox-close" type="button" aria-label="Close">&times;</button>
+  <img id="ab-lightbox-img" alt="" />
 </div>
 
 <script>
@@ -1380,6 +1464,105 @@ function renderTabIntro(tab) {
 }
 renderTabIntro('dashboard');
 
+// ---------- About tab: the article ----------
+// The article lives in about.html and is fetched the first time the tab is opened,
+// so it costs nothing on the initial load. Figures that show a screen of this app
+// jump to that tab; the rest open in a lightbox.
+function abGoToTab(tab) {
+  const btn = document.querySelector('.tab[data-tab="' + tab + '"]');
+  if (btn) { btn.click(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+}
+let AB_LOADED = false;
+async function openAboutTab() {
+  if (AB_LOADED) return;
+  AB_LOADED = true;
+  const host = document.getElementById('ab-article');
+  try {
+    const r = await fetch('about.html', { headers: { accept: 'text/html' } });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    host.innerHTML = await r.text();
+    abBuildToc();
+  } catch (e) {
+    AB_LOADED = false;
+    host.innerHTML = '<p class="muted">The article could not be loaded (' + escapeHtml(e.message || String(e)) +
+      '). <a href="about.html" target="_blank" rel="noopener">Open it in a new tab</a>.</p>';
+  }
+}
+function abBuildToc() {
+  const toc = document.getElementById('ab-toc');
+  const heads = document.querySelectorAll('#ab-article h1.ab-part, #ab-article h2');
+  let html = '';
+  heads.forEach(h => {
+    const part = h.tagName === 'H1';
+    html += '<a href="#' + h.id + '" class="' + (part ? 'part' : '') + '" data-target="' + h.id + '">' +
+            escapeHtml(h.textContent) + '</a>';
+  });
+  toc.innerHTML = html;
+  toc.addEventListener('click', e => {
+    const a = e.target.closest('a[data-target]');
+    if (!a) return;
+    e.preventDefault();
+    const el = document.getElementById(a.dataset.target);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  abSpy();
+}
+// Highlight the section currently under the sticky tab bar.
+let abSpyQueued = false;
+function abSpy() {
+  const toc = document.getElementById('ab-toc');
+  if (!toc || !toc.children.length) return;
+  const heads = [...document.querySelectorAll('#ab-article h1.ab-part, #ab-article h2')];
+  let current = heads[0];
+  for (const h of heads) { if (h.getBoundingClientRect().top <= 120) current = h; else break; }
+  [...toc.children].forEach(a => a.classList.toggle('on', a.dataset.target === (current && current.id)));
+}
+function abSyncTopButton() {
+  const btn = document.getElementById('ab-top');
+  if (!btn) return;
+  const onAbout = document.getElementById('panel-about').classList.contains('active');
+  btn.classList.toggle('on', onAbout && window.scrollY > 600);
+}
+window.addEventListener('scroll', () => {
+  abSyncTopButton();
+  if (abSpyQueued) return;
+  abSpyQueued = true;
+  requestAnimationFrame(() => { abSpyQueued = false; abSpy(); });
+}, { passive: true });
+document.getElementById('ab-top').addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+document.getElementById('tab-intro-cta').addEventListener('click', () => abGoToTab('about'));
+
+// Lightbox
+function abOpenLightbox(src) {
+  const box = document.getElementById('ab-lightbox');
+  document.getElementById('ab-lightbox-img').src = src;
+  box.hidden = false;
+}
+function abCloseLightbox() { document.getElementById('ab-lightbox').hidden = true; }
+document.getElementById('ab-lightbox').addEventListener('click', e => {
+  if (e.target.id !== 'ab-lightbox-img') abCloseLightbox();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') abCloseLightbox(); });
+
+// Figure interactions (delegated — the article is injected later)
+function abActivateFigure(target) {
+  const img = target.closest ? target.closest('img[data-zoom]') : null;
+  if (img) { abOpenLightbox(img.getAttribute('data-zoom')); return true; }
+  const fig = target.closest ? target.closest('.ab-fig') : null;
+  if (!fig) return false;
+  const goto = fig.getAttribute('data-goto');
+  if (goto) { abGoToTab(goto); return true; }
+  const zoom = fig.getAttribute('data-zoom');
+  if (zoom) { abOpenLightbox(zoom); return true; }
+  return false;
+}
+document.addEventListener('click', e => { abActivateFigure(e.target); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const fig = e.target && e.target.classList && e.target.classList.contains('ab-fig') ? e.target : null;
+  if (fig && abActivateFigure(fig)) e.preventDefault();
+});
+
 // ---------- Tab switching ----------
 document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
@@ -1388,6 +1571,8 @@ document.querySelectorAll('.tab').forEach(t => {
     t.classList.add('active');
     document.getElementById('panel-' + t.dataset.tab).classList.add('active');
     renderTabIntro(t.dataset.tab);
+    if (t.dataset.tab === 'about') openAboutTab();
+    abSyncTopButton();
     if (t.dataset.tab === 'tree' && typeof openTreeTab === 'function') openTreeTab();
     if (t.dataset.tab === 'bystatus' && typeof renderByStatusBody === 'function' && ALL_TASKS) renderByStatusBody(ALL_TASKS);
     if (t.dataset.tab === 'timeline' && typeof renderTimeline === 'function' && ALL_TASKS) renderTimeline(ALL_TASKS);

@@ -10,8 +10,6 @@ _docpreview*.jpg
 _kpidemo.html
 *.docx
 *.pdf
-# ...except the article the dashboard links to (served statically by Vercel)
-!ClickUp-Project-Tracker.pdf
 DOCUMENTACAO-PT.md
 DOCUMENTACAO-PT-REVISADA.md
 ARTIGO-PT.md
