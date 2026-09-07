@@ -6,3 +6,12 @@ node_modules
 frame_*.png
 _pdfpreview.png
 _pdfpreview2.png
+_docpreview*.jpg
+_kpidemo.html
+*.docx
+*.pdf
+DOCUMENTACAO-PT.md
+DOCUMENTACAO-PT-REVISADA.md
+ARTIGO-PT.md
+artigo-img/
+ARTICLE-EN.md
