@@ -114,6 +114,23 @@ h3 { font-size: 13px; margin: 0 0 6px; color: var(--text-muted); text-transform:
 .muted { color: var(--text-muted); font-size: 12px; }
 .tagline { color: var(--text-muted); margin: 0; font-size: 17px; font-weight: 300; letter-spacing: -0.016em; max-width: 640px; }
 
+/* ---- Article card: the case study behind the dashboard + PDF download ---- */
+.article-card { display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-card);
+  padding: 16px 20px; margin: 14px 0 0; box-shadow: var(--shadow-sm); }
+.article-card .article-body { flex: 1; min-width: 260px; }
+.article-eyebrow { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--text-subtle); margin-bottom: 6px; }
+.article-title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 6px; color: var(--text); }
+.article-text { font-size: 13px; line-height: 1.5; color: var(--text-muted); margin: 0; }
+.article-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.article-actions .article-meta { font-size: 11px; color: var(--text-subtle); }
+.article-actions .btn { text-decoration: none; display: inline-block; white-space: nowrap; }
+@media (max-width: 700px) {
+  .article-card { padding: 14px 16px; gap: 14px; }
+  .article-actions { align-items: stretch; width: 100%; }
+  .article-actions .btn, .article-actions .article-meta { text-align: center; }
+}
 .tabs { position: sticky; top: 0; z-index: 60; display: flex; gap: 4px; padding: 5px; margin: 14px 0 18px; flex-wrap: wrap; background: var(--glass); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--border); border-radius: var(--radius-pill); }
 .tab { padding: 8px 16px; cursor: pointer; border: none; background: none; font: inherit; font-size: 14px; font-weight: 500; color: var(--text-muted); border-radius: var(--radius-pill); transition: background .15s, color .15s; }
 .tab.active { color: var(--text); background: var(--surface); font-weight: 600; box-shadow: var(--shadow-sm); }
@@ -754,6 +771,23 @@ textarea.wr-input { resize:vertical; }
       <a class="meta-link" href="https://app.clickup.com/90141002846/v/li/901417662317" target="_blank" rel="noopener">Open list in ClickUp &#8599;</a>
     </div>
     <div id="integrity-banner"></div>
+
+    <aside class="article-card" aria-label="The article behind this project">
+      <div class="article-body">
+        <span class="article-eyebrow">Case study</span>
+        <h3 class="article-title">How this dashboard was built</h3>
+        <p class="article-text">This dashboard started as a workaround: the ClickUp free plan caps the reporting and
+          automation you can build inside the tool, so I built the reporting layer outside it. The article tells the
+          whole story — the first prototype as a Claude Artifact, the ClickUp integration, the Weekly Reports module
+          and its Slack delivery model, and finally moving everything out of the Artifact onto GitHub + Vercel as the
+          public web app you are looking at now. It also covers the decisions behind it: MCP connector versus REST API,
+          how the ~1,555 demo tasks were generated through the API, and what the scheduled automation actually does.</p>
+      </div>
+      <div class="article-actions">
+        <a class="btn primary" href="/ClickUp-Project-Tracker.pdf" download>&#128196; Download the article (PDF)</a>
+        <span class="article-meta">30 pages · 1.5&nbsp;MB · English</span>
+      </div>
+    </aside>
 
     <div class="tabs">
       <button class="tab active" data-tab="dashboard">Dashboard</button>
